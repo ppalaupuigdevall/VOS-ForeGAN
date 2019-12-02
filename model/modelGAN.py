@@ -1,10 +1,12 @@
 import torch
 from torch import nn, optim
 from torch.autograd.variable import Variable
-from torchvision import transforms, datasets, utils
-from PIL import Image
-import numpy as np
-import math
+import sys
+sys.path.insert(0, '/Users/marinaalonsopoal/PycharmProjects/GANs')
+from networks.discriminator import Discriminator
+from networks.generator import Generator
+from utils import *
+
 
 class Model:
 
@@ -27,14 +29,12 @@ class Model:
         self._generator.cuda()
         self._discriminator.cuda()
 
-
     def _create_optimizer(self):
         # Generator Optimizer
         self._opt_g = torch.optim.Adam(self._generator.parameters(), lr=0.0002, betas=(0.5, 0.999))
 
         # Discriminator Optimizer
         self._opt_d = torch.optim.Adam(self._discriminator.parameters(), lr=0.0002, betas=(0.5, 0.999))
-
 
     def _init_criterion(self, batch_size):
         # Binary Cross-Entropy (BCE) Loss
