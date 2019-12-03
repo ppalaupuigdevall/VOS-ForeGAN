@@ -26,4 +26,8 @@ def display_batch_images(img, imtype=np.uint8, unnormalize=True, nrows=None, mea
     img = img.cpu().float()
     img = (img*std+mean)*255
 
+    img -= img.min()
+    img /= img.max()
+    # img = img.permute(1, 2, 0)
+
     return img

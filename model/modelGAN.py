@@ -96,5 +96,4 @@ class Model:
 
         # 5. Update weights
         self._opt_d.step()
-
         return loss_real.item(), loss_fake.item()
