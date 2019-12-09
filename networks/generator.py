@@ -7,8 +7,10 @@ class Generator(torch.nn.Module):
     def __init__(self):
         super(Generator, self).__init__()
 
-        #  Linear Layer
-        self._fc = torch.nn.Linear(100, 1024 * 4 * 4)
+        self.label_emb = nn.Embedding(10, 10)
+
+        #  Linear Layer - 100 for z (noise) and 10 for c (class labels)
+        self._fc = torch.nn.Linear(100 + 10, 32 * 32 * 4 * 4)
 
         #  Sequential Container
         self._conv1 = nn.Sequential(
@@ -28,10 +30,27 @@ class Generator(torch.nn.Module):
             nn.Tanh()
         )
 
-    def forward(self, x):
+    def forward(self, z, c):
+        # z size: (BS, 100)
+        # c size: (BS)
+
+        y = self.label_emb(c)
+        # y size: (BS, 10)
+
+        # Concat to condition noise with labels
+        x = torch.cat([z, y], 1)
+        # x size: (BS, 110)
+
         x = self._fc(x)
-        x = self._conv1(x.view(x.shape[0], 1024, 4, 4))
+
+        x = x.view(x.shape[0], 1024, 4, 4)
+
+        x = self._conv1(x)
+
         x = self._conv2(x)
+
         x = self._conv3(x)
+        # x size: (BS, 1, 32, 32)
+
         return x
 
