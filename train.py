@@ -6,7 +6,7 @@ from model.modelGAN import Model
 from utils import *
 from torch.autograd.variable import Variable
 from tensorboardX import SummaryWriter
-writer = SummaryWriter('runs/cdcgan_train_ayuda')
+writer = SummaryWriter('runs/cdcgan_train_ayuda_2')
 import torchvision.utils as vutils
 
 
@@ -23,7 +23,7 @@ i = 0
 for epoch in range(num_epochs):
 
     for n_batch, (real_samples, real_labels) in enumerate(data_loader):
-        print(real_labels)
+        
         # Prepare batch data
         real_samples = Variable(real_samples).cuda()  # size: (BS, 1, 32, 32)
         real_labels = Variable(real_labels).cuda()  # size: (BS)
@@ -33,7 +33,7 @@ for epoch in range(num_epochs):
 
         if n_batch % 100 == 0:
             i = i + 1
-            print("Epoch %2d of %2d - Batch %2d of %2d - Gen.Loss:%.2f Disc.Loss:%.2f %.2f" % (epoch, num_epochs,
+            print("Epoch %2d of %2d - Batch %2d of %2d - Gen.Loss: %.2f Disc.Loss: %.2f - %.2f" % (epoch, num_epochs,
                   n_batch, len(data_loader), loss_g, loss_d[0], loss_d[1]))
             writer.add_scalars('data/losses', {'loss_gen': loss_g, 'loss_disc': (loss_d[0]+loss_d[1])/2}, i)
 

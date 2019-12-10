@@ -51,7 +51,7 @@ class Generator(torch.nn.Module):
         x = x.view(x.shape[0], 1024, 4, 4)
 
         x = self._conv1(x)
-
+ 
         x = self._conv2(x)
 
         x = self._conv3(x)

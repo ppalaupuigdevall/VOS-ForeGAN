@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torch.autograd.variable import Variable
-
+torch.manual_seed(7)
 
 class Discriminator(torch.nn.Module):
 

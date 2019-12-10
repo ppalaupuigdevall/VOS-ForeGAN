@@ -2,7 +2,6 @@ import torch
 from torch import nn, optim
 from torch.autograd.variable import Variable
 import sys
-sys.path.insert(0, '/Users/marinaalonsopoal/PycharmProjects/GANs')
 from networks.discriminator import Discriminator
 from networks.generator import Generator
 from utils import *
@@ -52,12 +51,15 @@ class Model:
     # Optimize Model
     def step_optimization(self, real_samples, real_labels):
         # Generate Fake Labels and Samples
-        fake_labels = Variable(torch.LongTensor(np.random.randint(0, 10, real_samples.size(0)))).cuda()  # size: (BS)
-        fake_samples = self.generate_samples(fake_labels, real_samples.size(0))  # size: (BS, 1, 32, 32)
+        #fake_labels = Variable(torch.LongTensor(np.random.randint(0, 10, real_samples.size(0)))).cuda()  # size: (BS)
+
+        #fake_samples = self.generate_samples(fake_labels, real_samples.size(0))  # size: (BS, 1, 32, 32)
 
         # Optimize Generator
         # Optimize Discriminator
-        loss_d = self._step_opt_d(real_samples, real_labels, fake_samples, fake_labels)
+        loss_d = self._step_opt_d(real_samples, real_labels)
+        fake_labels = Variable(torch.LongTensor(np.random.randint(0, 10, real_samples.size(0)))).cuda()  # size: (BS)
+        fake_samples = self.generate_samples(fake_labels, real_samples.size(0))
         loss_g = self._step_opt_g(fake_samples, fake_labels)
         # Detach() detaches the output from the computational graph, no gradient will be backpropagated along this variable.
 
@@ -71,7 +73,8 @@ class Model:
         validity = self._discriminator(fake_samples, fake_labels)
 
         # 3. Calculate error and backpropagate
-        loss = self._criterion(validity, self._label_real)
+        loss = self._criterion(validity, self._label_real) # Per mi aixo hauria de ser fake no real com estava # BUG?
+
         loss.backward()
 
         # 4. Update Weights
@@ -79,16 +82,18 @@ class Model:
 
         return loss.item()
 
-    def _step_opt_d(self, real_samples, real_labels, fake_samples, fake_labels):
+    def _step_opt_d(self, real_samples, real_labels):
         # 1. Reset gradients
         self._opt_d.zero_grad()
 
         # 2. Discriminate real samples
         validity_real = self._discriminator(real_samples, real_labels)
         loss_real = self._criterion(validity_real, self._label_real)
-
+        
+        fake_labels = Variable(torch.LongTensor(np.random.randint(0, 10, real_samples.size(0)))).cuda()  # size: (BS)
+        fake_samples = self.generate_samples(fake_labels, real_samples.size(0))  # size: (BS, 1, 32, 32)
         # 3. Discriminate fake samples
-        validity_fake = self._discriminator(fake_samples, fake_labels)
+        validity_fake = self._discriminator(fake_samples.detach(), fake_labels)
         loss_fake = self._criterion(validity_fake, self._label_fake)
 
         # 4. Total discriminator loss and backpropagate
