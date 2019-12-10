@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torch.autograd.variable import Variable
 
 
 class Generator(torch.nn.Module):
@@ -35,6 +36,10 @@ class Generator(torch.nn.Module):
         # c size: (BS)
 
         y = self.label_emb(c)
+
+        # y = torch.eye(10)
+        # y = y[c]
+        # y = Variable(y).cuda()
         # y size: (BS, 10)
 
         # Concat to condition noise with labels

@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torch.autograd.variable import Variable
 
 
 class Discriminator(torch.nn.Module):
@@ -43,6 +44,9 @@ class Discriminator(torch.nn.Module):
 
         # Embed labels
         y = self.label_emb(c)
+        # y = torch.eye(10)
+        # y = y[c]
+        # y = Variable(y).cuda()
         # y size: (BS, 10)
 
         # Concatenate

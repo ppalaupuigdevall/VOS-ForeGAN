@@ -6,7 +6,7 @@ from model.modelGAN import Model
 from utils import *
 from torch.autograd.variable import Variable
 from tensorboardX import SummaryWriter
-writer = SummaryWriter('runs/gan_losses')
+writer = SummaryWriter('runs/cdcgan_train_ayuda')
 import torchvision.utils as vutils
 
 
@@ -14,7 +14,7 @@ import torchvision.utils as vutils
 batch_size = 100
 data_loader = torch.utils.data.DataLoader(mnist_dataset(), batch_size=batch_size, shuffle=True)
 
-num_epochs = 50
+num_epochs = 10
 num_val_samples = 100  # Number of images that will be displayed
 z_val = norm_noise(num_val_samples)
 model = Model(batch_size)
@@ -23,7 +23,7 @@ i = 0
 for epoch in range(num_epochs):
 
     for n_batch, (real_samples, real_labels) in enumerate(data_loader):
-
+        print(real_labels)
         # Prepare batch data
         real_samples = Variable(real_samples).cuda()  # size: (BS, 1, 32, 32)
         real_labels = Variable(real_labels).cuda()  # size: (BS)
@@ -49,15 +49,67 @@ for epoch in range(num_epochs):
             writer.add_image('Real Samples', r_samples, i)
 
 # Test
-class_to_test = 1
-# TODO: Adaptar-ho (mirar sizes del generator i tal) per a que et mostri nomes un numero o simplement displayejar la primera de les 100 que et fa
-# test_label = torch.LongTensor([class_to_test]).cuda()
+class_to_test = 0
 test_label = torch.LongTensor([class_to_test for _ in range(batch_size)]).cuda()
 test_sample = model.generate_samples(test_label, 1, z=z_val).data.cpu()
 test_image = display_batch_images(test_sample)
 writer.add_image('Test Sample', test_image, 1)
 
+class_to_test = 1
+test_label = torch.LongTensor([class_to_test for _ in range(batch_size)]).cuda()
+test_sample = model.generate_samples(test_label, 1, z=z_val).data.cpu()
+test_image_1 = display_batch_images(test_sample)
+writer.add_image('One', test_image_1, 1)
+
+class_to_test = 2
+test_label = torch.LongTensor([class_to_test for _ in range(batch_size)]).cuda()
+test_sample = model.generate_samples(test_label, 1, z=z_val).data.cpu()
+test_image_2 = display_batch_images(test_sample)
+writer.add_image('Two', test_image_2, 1)
+
+class_to_test = 3
+test_label = torch.LongTensor([class_to_test for _ in range(batch_size)]).cuda()
+test_sample = model.generate_samples(test_label, 1, z=z_val).data.cpu()
+test_image_3 = display_batch_images(test_sample)
+writer.add_image('Three', test_image_3, 1)
+
+class_to_test = 4
+test_label = torch.LongTensor([class_to_test for _ in range(batch_size)]).cuda()
+test_sample = model.generate_samples(test_label, 1, z=z_val).data.cpu()
+test_image_4 = display_batch_images(test_sample)
+writer.add_image('Four', test_image_4, 1)
+
+class_to_test = 5
+test_label = torch.LongTensor([class_to_test for _ in range(batch_size)]).cuda()
+test_sample = model.generate_samples(test_label, 1, z=z_val).data.cpu()
+test_image_5 = display_batch_images(test_sample)
+writer.add_image('Five', test_image_5, 1)
+
+class_to_test = 6
+test_label = torch.LongTensor([class_to_test for _ in range(batch_size)]).cuda()
+test_sample = model.generate_samples(test_label, 1, z=z_val).data.cpu()
+test_image_6 = display_batch_images(test_sample)
+writer.add_image('Six', test_image_6, 1)
+
+class_to_test = 7
+test_label = torch.LongTensor([class_to_test for _ in range(batch_size)]).cuda()
+test_sample = model.generate_samples(test_label, 1, z=z_val).data.cpu()
+test_image_7 = display_batch_images(test_sample)
+writer.add_image('Seven', test_image_7, 1)
+
+class_to_test = 8
+test_label = torch.LongTensor([class_to_test for _ in range(batch_size)]).cuda()
+test_sample = model.generate_samples(test_label, 1, z=z_val).data.cpu()
+test_image_8 = display_batch_images(test_sample)
+writer.add_image('Eight', test_image_8, 1)
+
+class_to_test = 9
+test_label = torch.LongTensor([class_to_test for _ in range(batch_size)]).cuda()
+test_sample = model.generate_samples(test_label, 1, z=z_val).data.cpu()
+test_image_9 = display_batch_images(test_sample)
+writer.add_image('Nine', test_image_9, 1)
+
 writer.close()
 
 # Save Model
-torch.save(model, '/home/marina/GANs/model/saved/model.pth.tar')
+# torch.save(model, '/home/marina/GANs/model/saved/model.pth.tar')

@@ -43,23 +43,23 @@ class Model:
         self._label_real = Variable(torch.ones(batch_size, 1)).cuda()
         self._label_fake = Variable(torch.zeros(batch_size, 1)).cuda()
 
-    # Generate Fake Samples ------------------------------------
+    # Generate Fake Samples sampling from Random Noise
     def generate_samples(self, c, batch_size, z=None):
-        # Generate fake samples sampling from random noise
         if z is None:
             z = norm_noise(batch_size)
         return self._generator(z, c)
 
-    # Optimize Model --------------------------------------------
+    # Optimize Model
     def step_optimization(self, real_samples, real_labels):
         # Generate Fake Labels and Samples
         fake_labels = Variable(torch.LongTensor(np.random.randint(0, 10, real_samples.size(0)))).cuda()  # size: (BS)
         fake_samples = self.generate_samples(fake_labels, real_samples.size(0))  # size: (BS, 1, 32, 32)
 
-        # Optimize Generator and Discriminator
+        # Optimize Generator
+        # Optimize Discriminator
+        loss_d = self._step_opt_d(real_samples, real_labels, fake_samples, fake_labels)
         loss_g = self._step_opt_g(fake_samples, fake_labels)
-        loss_d = self._step_opt_d(real_samples, real_labels, fake_samples.detach(), fake_labels)
-        # Detach() detaches the output from the computational graph, no gradient will be backproped along this variable.
+        # Detach() detaches the output from the computational graph, no gradient will be backpropagated along this variable.
 
         return loss_g, loss_d
 
@@ -68,10 +68,10 @@ class Model:
         self._opt_g.zero_grad()
 
         # 2. Evaluate fake samples
-        estim_fake = self._discriminator(fake_samples, fake_labels)
+        validity = self._discriminator(fake_samples, fake_labels)
 
         # 3. Calculate error and backpropagate
-        loss = self._criterion(estim_fake, self._label_real)
+        loss = self._criterion(validity, self._label_real)
         loss.backward()
 
         # 4. Update Weights
@@ -84,12 +84,12 @@ class Model:
         self._opt_d.zero_grad()
 
         # 2. Discriminate real samples
-        estim_real = self._discriminator(real_samples, real_labels)
-        loss_real = self._criterion(estim_real, self._label_real)
+        validity_real = self._discriminator(real_samples, real_labels)
+        loss_real = self._criterion(validity_real, self._label_real)
 
         # 3. Discriminate fake samples
-        estim_fake = self._discriminator(fake_samples, fake_labels)
-        loss_fake = self._criterion(estim_fake, self._label_fake)
+        validity_fake = self._discriminator(fake_samples, fake_labels)
+        loss_fake = self._criterion(validity_fake, self._label_fake)
 
         # 4. Total discriminator loss and backpropagate
         loss = (loss_real + loss_fake) / 2
