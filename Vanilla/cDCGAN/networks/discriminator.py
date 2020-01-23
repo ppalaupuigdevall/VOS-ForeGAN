@@ -36,7 +36,7 @@ class Discriminator(torch.nn.Module):
 
     def forward(self, x, c):
         # x size: (BS, 1, 32, 32)
-        # c size: (BS)
+        # c size: (BS, 1)
 
         # Embed labels
         y = self.label_emb(c)

@@ -1,8 +1,7 @@
 import sys
-sys.path.insert(0, '/Users/marinaalonsopoal/PycharmProjects/GANs')
-from cDCGAN.data import mnist_dataset
-from cDCGAN.model.modelGAN import Model
-from cDCGAN.utils import *
+sys.path.insert(0, '/home/marina/GANs/')
+from Vanilla.mnist import *
+from Vanilla.cDCGAN.model import Model
 from torch.autograd.variable import Variable
 from tensorboardX import SummaryWriter
 writer = SummaryWriter('runs/cDCGAN_train')
@@ -53,4 +52,4 @@ for i in range(10):
 writer.close()
 
 # Save Model
-torch.save(model, '/home/marina/GANs/model/saved/cDCGAN_model.pth.tar')
+torch.save(model, '/home/marina/GANs/cDCGAN/cDCGAN_model_10epoch.pth.tar')

@@ -1,4 +1,3 @@
-from cDCGAN.utils import *
 from tensorboardX import SummaryWriter
 writer = SummaryWriter('runs/cdcgan_test')
 

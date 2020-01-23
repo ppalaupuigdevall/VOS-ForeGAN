@@ -1,10 +1,9 @@
 from torch import nn
 from torch.autograd.variable import Variable
 import sys
-sys.path.insert(0, '/Users/marinaalonsopoal/PycharmProjects/GANs')
-from cDCGAN.networks import Discriminator
-from cDCGAN.networks import Generator
-from cDCGAN.utils import *
+sys.path.insert(0, '/home/marina/GANs/')
+from Vanilla.cDCGAN.networks.generator import Generator
+from Vanilla.cDCGAN.networks.discriminator import Discriminator
 
 
 class Model:
