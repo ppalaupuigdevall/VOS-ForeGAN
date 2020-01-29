@@ -21,7 +21,7 @@ input_batch = input_tensor.unsqueeze(0)  # create a mini-batch as expected by th
 # move the input and model to GPU for speed if available
 if torch.cuda.is_available():
     input_batch = input_batch.to('cuda')
-    model.to('cuda')
+    model = model.to('cuda')
 
 with torch.no_grad():
     output = model(input_batch)['out'][0]
