@@ -8,10 +8,10 @@ import pickle
 from utils import cv_utils
 
 
-class AusDataset(DatasetBase):
+class DavisDataset(DatasetBase):
     def __init__(self, opt, is_for_train):
-        super(AusDataset, self).__init__(opt, is_for_train)
-        self._name = 'AusDataset'
+        super(DavisDataset, self).__init__(opt, is_for_train)
+        self._name = 'DavisDataset'
 
         # read dataset
         self._read_dataset_paths()
@@ -107,11 +107,3 @@ class AusDataset(DatasetBase):
     def _get_img_by_id(self, id):
         filepath = os.path.join(self._imgs_dir, id+'.jpg')
         return cv_utils.read_cv2_img(filepath), filepath
-
-    def _generate_random_cond(self):
-        cond = None
-        while cond is None:
-            rand_sample_id = self._ids[random.randint(0, self._dataset_size - 1)]
-            cond = self._get_cond_by_id(rand_sample_id)
-            cond += np.random.uniform(-0.1, 0.1, cond.shape)
-        return cond

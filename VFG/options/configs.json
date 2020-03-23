@@ -1,0 +1,15 @@
+{
+    "dataset":
+    {
+        "img_dir":"/data/Ponc/DAVIS/JPEGImages/480p/",
+        "OF_dir": "/data/Ponc/DAVIS/OpticalFlows/",
+        "resolution": [175,325],
+        "T": 4
+    },
+    
+    "training":
+    {
+        
+        
+    }
+}
