@@ -3,6 +3,7 @@
     {
         "img_dir":"/data/Ponc/DAVIS/JPEGImages/480p/",
         "OF_dir": "/data/Ponc/DAVIS/OpticalFlows/",
+        "mask_dir": "/data/Ponc/DAVIS/Annotations/480p/",
         "resolution": [175,325],
         "T": 4
     },
