@@ -59,7 +59,7 @@ flow_v_remaped = remap_values(v, -20, 20, 0, 255)
 
 # Resize ori to warped's shape
 desired_shape = img_warped.shape[:2]
-desired_shape = resolutions[1]
+desired_shape = resolutions[2]
 img_ori_resized = resize_img(img, desired_shape)
 masked_img_resized = resize_img(masked_img, desired_shape)
 

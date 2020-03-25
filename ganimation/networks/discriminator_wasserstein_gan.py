@@ -20,8 +20,8 @@ class Discriminator(NetworkBase):
 
         k_size = int(image_size / np.power(2, repeat_num))
         self.main = nn.Sequential(*layers)
-        self.conv1 = nn.Conv2d(curr_dim, 1, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv2 = nn.Conv2d(curr_dim, c_dim, kernel_size=k_size, bias=False) # PatchGan discriminator
+        self.conv1 = nn.Conv2d(curr_dim, 1, kernel_size=3, stride=1, padding=1, bias=False) # PatchGan discriminator
+        self.conv2 = nn.Conv2d(curr_dim, c_dim, kernel_size=k_size, bias=False) 
 
     def forward(self, x):
         h = self.main(x)
