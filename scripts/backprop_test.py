@@ -46,6 +46,7 @@ class MyRecurrentModel(nn.Module):
         self.conv_2 = nn.Conv2d(1,1,3,1,1)
         self.conv_3 = nn.Conv2d(1,1,3,1,1)
         self.conv_4 = nn.Conv2d(1,1,3,1,1)
+        
         self.activation = nn.LeakyReLU()
         self.t = 0
     def forward(self, x):

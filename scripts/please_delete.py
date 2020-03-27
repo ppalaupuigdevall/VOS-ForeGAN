@@ -28,19 +28,22 @@ d = DavisDataset('./VFG/options/configs.json')
 dl = data.DataLoader(d, batch_size=batch_size)
 bat = next(iter(dl))
 x = bat['imgs'][0]
-# x = torch.rand(2,1,5,6)
+
+# def extract_img_patches(img, channels, height, )
+
 channels = 3
 height, width = 224,416 
 
 kh, kw = 60,112 
 dh, dw = 5, 10
+dh, dw = 20, 36 # this should be a more feasible stride
 
 # Pad tensor to get the same output
 # x = F.pad(x, (1, 1, 1, 1))
 
 # get all image windows of size (kh, kw) and stride (dh, dw)
 patches = x.unfold(2, kh, dh).unfold(3, kw, dw)
-patch = patches[1,:,0,0,:,:]
+patch = patches[1,:,2,3,:,:]
 patch_img = tensor2im(patch)
 cv2.imwrite('./imgs/img_patch.jpg', patch_img)
 print(patches.shape)  # [128, 16, 32, 32, 3, 3]

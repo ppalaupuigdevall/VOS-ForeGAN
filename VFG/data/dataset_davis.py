@@ -61,6 +61,7 @@ class DavisDataset(data.Dataset):
     
 
     def create_transform(self):
+        """NOTE: mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]"""
         transforms_list_img = [
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.5, 0.5, 0.5],\
@@ -120,7 +121,6 @@ class DavisDataset(data.Dataset):
 
     def __len__(self):
         return self.num_categories
-
 
 
 if __name__ == '__main__':

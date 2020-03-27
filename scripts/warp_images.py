@@ -49,9 +49,10 @@ flow = readFlow(os.path.join(flo_dir, flo_name))
 img = cv2.imread(os.path.join(img_dir, img_name))
 img_warped = warp_flow(img, flow)
 mask = cv2.imread(os.path.join(mask_dir, mask_name))
+mask_bg = cv2.bitwise_not(mask)
 print(mask.shape)
 masked_img = cv2.bitwise_and(img, mask)
-
+masked_img_bg = cv2.bitwise_and(img, mask_bg)
 u = flow[:,:,0]
 v = flow[:,:,1]
 flow_u_remaped = remap_values(u, -20, 20, 0, 255)
@@ -62,7 +63,7 @@ desired_shape = img_warped.shape[:2]
 desired_shape = resolutions[2]
 img_ori_resized = resize_img(img, desired_shape)
 masked_img_resized = resize_img(masked_img, desired_shape)
-
+masked_bg_resized = resize_img(masked_img_bg, desired_shape)
 img_warped_resized = resize_img(img_warped,desired_shape)
 flow_u_remaped_resized = resize_gray_img(flow_u_remaped, desired_shape)
 
@@ -74,8 +75,9 @@ if(display):
     cv2.destroyAllWindows()
 
 if(save):
-    cv2.imwrite('./warp1.jpg', img_warped)
-    cv2.imwrite('./img_warped_resized.jpg', img_warped_resized)
-    cv2.imwrite('./img_ori_resized.jpg',img_ori_resized)
-    cv2.imwrite('./flow_u_resized.jpg', flow_u_remaped_resized)
-    cv2.imwrite('./masked_img.jpg', masked_img_resized)
+    cv2.imwrite('./imgs/warp1.jpg', img_warped)
+    cv2.imwrite('./imgs/img_warped_resized.jpg', img_warped_resized)
+    cv2.imwrite('./imgs/img_ori_resized.jpg',img_ori_resized)
+    cv2.imwrite('./imgs/flow_u_resized.jpg', flow_u_remaped_resized)
+    cv2.imwrite('./imgs/masked_img.jpg', masked_img_resized)
+    cv2.imwrite('./imgs/masked_img_bg.jpg', masked_bg_resized)

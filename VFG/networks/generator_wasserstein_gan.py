@@ -1,14 +1,15 @@
 import torch.nn as nn
 import numpy as np
-from .networks import NetworkBase
+from networks import NetworkBase, NetworksFactory
 import torch
 
 class Generator(NetworkBase):
     """Generator. Encoder-Decoder Architecture."""
-    def __init__(self, conv_dim=64, c_dim=5, repeat_num=6):
+    def __init__(self, conv_dim=64, c_dim=5, repeat_num=6, T):
         super(Generator, self).__init__()
         self._name = 'generator_wgan'
-
+        self.T = T
+        self.t = 0
         layers = []
         layers.append(nn.Conv2d(3+c_dim, conv_dim, kernel_size=7, stride=1, padding=3, bias=False))
         layers.append(nn.InstanceNorm2d(conv_dim, affine=True))
@@ -34,16 +35,21 @@ class Generator(NetworkBase):
             curr_dim = curr_dim // 2
 
         self.main = nn.Sequential(*layers)
+        
+        self.convs_t = []
+        self.img_reg_packs = []
+        self.attention_reg_packs = []
+        
+        layers_img = []
+        layers_img.append(nn.Conv2d(curr_dim, 3, kernel_size=7, stride=1, padding=3, bias=False))
+        layers_img.append(nn.Tanh())
+        self.img_reg_packs.append(nn.Sequential(*layers_img))
 
-        layers = []
-        layers.append(nn.Conv2d(curr_dim, 3, kernel_size=7, stride=1, padding=3, bias=False))
-        layers.append(nn.Tanh())
-        self.img_reg = nn.Sequential(*layers)
+        layers_att = []
+        layers_att.append(nn.Conv2d(curr_dim, 1, kernel_size=7, stride=1, padding=3, bias=False))
+        layers_att.append(nn.Sigmoid())
+        self.attention_reg_packs.append.(nn.Sequential(*layers_att))
 
-        layers = []
-        layers.append(nn.Conv2d(curr_dim, 1, kernel_size=7, stride=1, padding=3, bias=False))
-        layers.append(nn.Sigmoid())
-        self.attetion_reg = nn.Sequential(*layers)
 
     def forward(self, x, c):
         # replicate spatially and concatenate domain information
@@ -66,3 +72,8 @@ class ResidualBlock(nn.Module):
 
     def forward(self, x):
         return x + self.main(x)
+
+
+if __name__ == '__main__':
+    G =  NetworksFactory.get_by_name('generator_wasserstein_gan')
+    print(G)
