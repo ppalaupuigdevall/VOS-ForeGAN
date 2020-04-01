@@ -5,12 +5,35 @@
         "OF_dir": "/data/Ponc/DAVIS/OpticalFlows/",
         "mask_dir": "/data/Ponc/DAVIS/Annotations/480p/",
         "resolution": [224,416],
-        "T": 4
+        "T": 6,
+        "batch_size":2
     },
     
     "training":
     {
+        "gpu_ids":"2",
+        "T":4,
+        "extra_ch_gf":5,
+        "extra_ch_gb":2,
+        "extra_ch_df":0,
+        "extra_ch_db":0,
+        
+        "lr_gf":0.0001,
+        "lr_gb":0.0001,
+        "lr_df":0.0001,
+        "lr_db":0.0001,
+        
+        "gf_adam_b1":0.5,
+        "gf_adam_b2":0.999,
+        "gb_adam_b1":0.5,
+        "gb_adam_b2":0.999,
+        "df_adam_b1":0.5,
+        "df_adam_b2":0.999,
+        "db_adam_b1":0.5,
+        "db_adam_b2":0.999
         
         
+
+    
     }
 }

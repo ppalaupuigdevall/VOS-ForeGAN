@@ -8,9 +8,13 @@ class NetworksFactory:
     @staticmethod
     def get_by_name(network_name, *args, **kwargs):
 
-        if network_name == 'generator_wasserstein_gan':
+        if network_name == 'generator_wasserstein_gan_f':
             from generator_wasserstein_gan import Generator
             network = Generator(*args, **kwargs)
+
+        elif network_name == 'generator_wasserstein_gan_b':
+
+            
         elif network_name == 'discriminator_wasserstein_gan':
             from discriminator_wasserstein_gan_patchgan import Discriminator
             network = Discriminator(*args, **kwargs)

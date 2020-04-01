@@ -23,20 +23,25 @@ def tensor2im(img, imtype=np.uint8, unnormalize=True, idx=0, nrows=None):
     return image_numpy_t.astype(imtype)
 
 
-batch_size = 2
+batch_size = 4
 d = DavisDataset('./VFG/options/configs.json')
 dl = data.DataLoader(d, batch_size=batch_size)
 bat = next(iter(dl))
 x = bat['imgs'][0]
 
-# def extract_img_patches(img, channels, height, )
+
+
+def extract_img_patches(x, ch=3, height=224, width=416, kh=60, kw=112,dh=20, dw=36):
+    patches = x.unfold(2, kh, dh).unfold(3, kw, dw)
+    patches = patches.view(-1, ch, kh, kw)
+    return patches
 
 channels = 3
 height, width = 224,416 
 
 kh, kw = 60,112 
 dh, dw = 5, 10
-dh, dw = 20, 36 # this should be a more feasible stride
+dh, dw = 30, 54 # this should be a more feasible stride
 
 # Pad tensor to get the same output
 # x = F.pad(x, (1, 1, 1, 1))
@@ -50,6 +55,5 @@ print(patches.shape)  # [128, 16, 32, 32, 3, 3]
 # Permute so that channels are next to patch dimension
 patches = patches.permute(0, 2, 3, 1, 4, 5).contiguous()  # [128, 32, 32, 16, 3, 3]
 # View as [batch_size, height, width, channels*kh*kw]
-patches = patches.view(*patches.size()[:3], -1)
-print(patches.shape)
-
+# patches = patches.view(*patches.size()[:3], -1)
+# print(patches.shape)

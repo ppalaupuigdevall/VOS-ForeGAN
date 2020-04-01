@@ -205,7 +205,7 @@ class GANimation(BaseModel):
 
             # train D
         
-         loss_D, fake_imgs_masked = self._forward_D()
+            loss_D, fake_imgs_masked = self._forward_D()
             self._optimizer_D.zero_grad()
             loss_D.backward()
             self._optimizer_D.step()
@@ -223,6 +223,12 @@ class GANimation(BaseModel):
                 self._optimizer_G.step()
 
     def _forward_G(self, keep_data_for_visuals):
+
+        for i in range(T):
+            img_next, fg_next, bg_next = generate_fake_samples(...)
+            
+
+
         # generate fake images
         fake_imgs, fake_img_mask = self._G.forward(self._real_img, self._desired_cond)
         fake_img_mask = self._do_if_necessary_saturate_mask(fake_img_mask, saturate=self._opt.do_saturate_mask)

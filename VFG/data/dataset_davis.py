@@ -47,7 +47,7 @@ class DavisDataset(data.Dataset):
         self.mask_dir = config['mask_dir']
         self.categories = os.listdir(self.OF_dir)
         self.num_categories = len(self.categories)
-        
+        print(self.num_categories)
         self.imgs_by_cat, self.OFs_by_cat, self.masks_by_cat = {}, {}, {}
         for cat in self.categories:
             self.imgs_by_cat[cat] = sorted(os.listdir(os.path.join(self.img_dir, cat)))
@@ -89,6 +89,13 @@ class DavisDataset(data.Dataset):
                 masked_img = cv2.bitwise_and(img, mask)
                 masked_img = resize_img(masked_img, self.resolution)
                 masked_img = self.transform_img(masked_img)
+
+                mask_bg = cv2.bitwise_not(mask)
+                masked_img_bg = cv2.bitwise_and(img, mask_bg)
+                masked_img_bg = resize_img(masked_img_bg, self.resolution)
+                masked_img_bg = self.transform_img(masked_img_bg)
+
+
             if(i<self.T-1):
                 flow = readFlow(OFs_paths[i])
                 warped_img = resize_img(warp_flow(img, flow), self.resolution)
@@ -115,7 +122,8 @@ class DavisDataset(data.Dataset):
         sample["imgs"] = imgs
         sample["OFs"] = OFs
         sample["warped_imgs"] = warped_imgs
-        sample["mask"] = masked_img
+        sample["mask_f"] = masked_img
+        sample["mask_b"] = masked_img_bg
         
         return sample
 
@@ -125,8 +133,14 @@ class DavisDataset(data.Dataset):
 
 if __name__ == '__main__':
     d = DavisDataset('./VFG/options/configs.json')
-    dl = data.DataLoader(d, batch_size=2)
+    dl = data.DataLoader(d, batch_size=5)
     bat = next(iter(dl))
+    print(bat.keys())
+    T = d.T
+    for t in range(T):
+        print(bat['imgs'][t].size())
+    
+    
     # print(bat['imgs'][0][0,:,0,0])
     # print(bat['OFs'][0][0,:,0,0])
     # print(bat['warped_imgs'][0][0,:,0,0])
@@ -137,3 +151,11 @@ if __name__ == '__main__':
     # tensor([-1., -1., -1.])
     for i, val in enumerate(dl):
         print(i, val.keys())
+        # print(val['imgs'])
+    import torch
+    print("mask range")
+    print(torch.min(bat['mask_f']))
+    print(torch.max(bat['mask_f']))
+    print("img range")
+    print(torch.min(bat['imgs'][0]))
+    print(torch.max(bat['imgs']))

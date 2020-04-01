@@ -10,8 +10,8 @@ class ModelsFactory:
     def get_by_name(model_name, *args, **kwargs):
         model = None
 
-        if model_name == 'ganimation':
-            from .ganimation import GANimation
+        if model_name == 'ForestGAN':
+            from forestgan import ForestGAN
             model = GANimation(*args, **kwargs)
         else:
             raise ValueError("Model %s not recognized." % model_name)
@@ -29,7 +29,7 @@ class BaseModel(object):
         self._gpu_ids = opt.gpu_ids
         self._is_train = opt.is_train
 
-        self._Tensor = torch.cuda.FloatTensor if self._gpu_ids else torch.Tensor
+       
         self._save_dir = os.path.join(opt.checkpoints_dir, opt.name)
 
 

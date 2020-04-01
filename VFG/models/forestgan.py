@@ -9,10 +9,11 @@ import os
 import numpy as np
 
 
-class GANimation(BaseModel):
+class ForestGAN(BaseModel):
     def __init__(self, opt):
-        super(GANimation, self).__init__(opt)
-        self._name = 'GANimation'
+        
+        super(ForestGAN, self).__init__(opt)
+        self._name = 'ForestGAN'
 
         # create networks
         self._init_create_networks()
@@ -22,90 +23,91 @@ class GANimation(BaseModel):
             self._init_train_vars()
 
         # load networks and optimizers
-        if not self._is_train or self._opt.load_epoch > 0:
-            self.load()
-
-        # prefetch variables
-        self._init_prefetch_inputs()
-
+        # if not self._is_train or self._opt.load_epoch > 0:
+        #     self.load()
         # init
         self._init_losses()
 
+
+    def set_input(self, sample):
+        self._imgs = sample['imgs'] # [b0, b1, ..., bt-1]
+        self._OFs = sample['OFs'] # [b0, b1, ..., bt-1]
+        self._warped_imgs = sample['warped_imgs'] # [b0, b1, ..., bt-1]
+        self._mask_f = sample['mask_f'] 
+        self._mask_b = sample['mask_b']
+
     def _init_create_networks(self):
-        # generator network
-        self._G = self._create_generator()
-        self._G.init_weights()
+        
+        # generator foreground network
+        self._Gf = self._create_generator_f()
+        self._Gf.init_weights()
         if len(self._gpu_ids) > 1:
-            self._G = torch.nn.DataParallel(self._G, device_ids=self._gpu_ids)
-        self._G.cuda()
+            self._Gf = torch.nn.DataParallel(self._Gf, device_ids=self._gpu_ids)
+        self._Gf.cuda(self._gpu_ids)
+
+         # generator foreground network
+        self._Gb = self._create_generator()
+        self._Gb.init_weights()
+        if len(self._gpu_ids) > 1:
+            self._Gb = torch.nn.DataParallel(self._Gb, device_ids=self._gpu_ids)
+        self._Gb.cuda(self._gpu_ids)
 
         # discriminator network
-        self._D = self._create_discriminator()
-        self._D.init_weights()
+        self._Df = self._create_discriminator()
+        self._Df.init_weights()
         if len(self._gpu_ids) > 1:
-            self._D = torch.nn.DataParallel(self._D, device_ids=self._gpu_ids)
-        self._D.cuda()
+            self._Df = torch.nn.DataParallel(self._Df, device_ids=self._gpu_ids)
+        self._Df.cuda(self._gpu_ids)
 
-    def _create_generator(self):
-        return NetworksFactory.get_by_name('generator_wasserstein_gan', c_dim=self._opt.cond_nc)
+        # discriminator network
+        self._Db = self._create_discriminator()
+        self._Db.init_weights()
+        if len(self._gpu_ids) > 1:
+            self._Db = torch.nn.DataParallel(self._Db, device_ids=self._gpu_ids)
+        self._Db.cuda(self._gpu_ids)
 
-    def _create_discriminator(self):
-        return NetworksFactory.get_by_name('discriminator_wasserstein_gan', c_dim=self._opt.cond_nc)
+    def _create_generator_f(self):
+        return NetworksFactory.get_by_name('generator_wasserstein_gan_f', c_dim=self._opt.extra_ch_gf)
+
+    def _create_generator_b(self):
+        return NetworksFactory.get_by_name('generator_wasserstein_gan_b', c_dim=self._opt.extra_ch_gb)
+
+    def _create_discriminator_f(self):
+        return NetworksFactory.get_by_name('discriminator_wasserstein_gan', c_dim=self._opt.extra_ch_df)
+    
+    def _create_discriminator_b(self):
+        return NetworksFactory.get_by_name('discriminator_wasserstein_gan', c_dim=self._opt.extra_ch_db)
 
     def _init_train_vars(self):
-        self._current_lr_G = self._opt.lr_G
-        self._current_lr_D = self._opt.lr_D
+        self._current_lr_Gf = self._opt.lr_Gf
+        self._current_lr_Gb = self._opt.lr_Gb
+        self._current_lr_Df = self._opt.lr_Df
+        self._current_lr_Db = self._opt.lr_Db
 
         # initialize optimizers
-        self._optimizer_G = torch.optim.Adam(self._G.parameters(), lr=self._current_lr_G,
-                                             betas=[self._opt.G_adam_b1, self._opt.G_adam_b2])
-        self._optimizer_D = torch.optim.Adam(self._D.parameters(), lr=self._current_lr_D,
-                                             betas=[self._opt.D_adam_b1, self._opt.D_adam_b2])
-
-    def _init_prefetch_inputs(self):
-        self._input_real_img = self._Tensor(self._opt.batch_size, 3, self._opt.image_size, self._opt.image_size)
-        self._input_real_cond = self._Tensor(self._opt.batch_size, self._opt.cond_nc)
-        self._input_desired_cond = self._Tensor(self._opt.batch_size, self._opt.cond_nc)
-        self._input_real_img_path = None
-        self._input_real_cond_path = None
+        self._optimizer_Gf = torch.optim.Adam(self._Gf.parameters(), lr=self._current_lr_Gf,
+                                             betas=[self._opt.Gf_adam_b1, self._opt.Gf_adam_b2])
+        self._optimizer_Df = torch.optim.Adam(self._Df.parameters(), lr=self._current_lr_Df,
+                                             betas=[self._opt.Df_adam_b1, self._opt.Df_adam_b2])
+        self._optimizer_Gb = torch.optim.Adam(self._Gb.parameters(), lr=self._current_lr_Gb,
+                                            betas=[self._opt.Gb_adam_b1, self._opt.Gb_adam_b2])
+        self._optimizer_Db = torch.optim.Adam(self._Db.parameters(), lr=self._current_lr_Db,
+                                             betas=[self._opt.Db_adam_b1, self._opt.Db_adam_b2])
+        
 
     def _init_losses(self):
         # define loss functions
-        self._criterion_cycle = torch.nn.L1Loss().cuda()
-        self._criterion_D_cond = torch.nn.MSELoss().cuda()
+        self._loss_Gs_rec = torch.nn.MSELoss().cuda()
 
         # init losses G
-        self._loss_g_fake = Variable(self._Tensor([0]))
-        self._loss_g_cond = Variable(self._Tensor([0]))
-        self._loss_g_cyc = Variable(self._Tensor([0]))
-        self._loss_g_mask_1 = Variable(self._Tensor([0]))
-        self._loss_g_mask_2 = Variable(self._Tensor([0]))
-        self._loss_g_idt = Variable(self._Tensor([0]))
-        self._loss_g_masked_fake = Variable(self._Tensor([0]))
-        self._loss_g_masked_cond = Variable(self._Tensor([0]))
-        self._loss_g_mask_1_smooth = Variable(self._Tensor([0]))
-        self._loss_g_mask_2_smooth = Variable(self._Tensor([0]))
-        self._loss_rec_real_img_rgb = Variable(self._Tensor([0]))
-        self._loss_g_fake_imgs_smooth = Variable(self._Tensor([0]))
-        self._loss_g_unmasked_rgb = Variable(self._Tensor([0]))
-
-        # init losses D
+        self._loss_g_fg = torch.cuda.FloatTensor([0])
+        self._loss_g_bg = torch.cuda.FloatTensor([0])
+        self._loss_g_fb_rec_img = torch.cuda.FloatTensor([0])
+        
+        # init losses D # TODO
         self._loss_d_real = Variable(self._Tensor([0]))
-        self._loss_d_cond = Variable(self._Tensor([0]))
         self._loss_d_fake = Variable(self._Tensor([0]))
         self._loss_d_gp = Variable(self._Tensor([0]))
-
-    def set_input(self, input):
-        self._input_real_img.resize_(input['real_img'].size()).copy_(input['real_img'])
-        self._input_real_cond.resize_(input['real_cond'].size()).copy_(input['real_cond'])
-        self._input_desired_cond.resize_(input['desired_cond'].size()).copy_(input['desired_cond'])
-        self._input_real_id = input['sample_id']
-        self._input_real_img_path = input['real_img_path']
-
-        if len(self._gpu_ids) > 0:
-            self._input_real_img = self._input_real_img.cuda(self._gpu_ids[0], async=True)
-            self._input_real_cond = self._input_real_cond.cuda(self._gpu_ids[0], async=True)
-            self._input_desired_cond = self._input_desired_cond.cuda(self._gpu_ids[0], async=True)
 
     def set_train(self):
         self._G.train()
@@ -117,10 +119,8 @@ class GANimation(BaseModel):
         self._is_train = False
 
     # get image paths
-    def get_image_paths(self):
-        return OrderedDict([('real_img', self._input_real_img_path)])
 
-    def forward(self, keep_data_for_visuals=False, return_estimates=False):
+    def forward(self, sample, keep_data_for_visuals=False, return_estimates=False):
         if not self._is_train:
             # convert tensor to variables
             real_img = Variable(self._input_real_img, volatile=True)
@@ -203,13 +203,12 @@ class GANimation(BaseModel):
             self._real_cond = Variable(self._input_real_cond)
             self._desired_cond = Variable(self._input_desired_cond)
 
-            # train D
-        
-         loss_D, fake_imgs_masked = self._forward_D()
+            # train D        
+            loss_D, fake_imgs_masked = self._forward_D()
             self._optimizer_D.zero_grad()
             loss_D.backward()
             self._optimizer_D.step()
-
+            
             loss_D_gp= self._gradinet_penalty_D(fake_imgs_masked)
             self._optimizer_D.zero_grad()
             loss_D_gp.backward()
@@ -223,6 +222,8 @@ class GANimation(BaseModel):
                 self._optimizer_G.step()
 
     def _forward_G(self, keep_data_for_visuals):
+        
+
         # generate fake images
         fake_imgs, fake_img_mask = self._G.forward(self._real_img, self._desired_cond)
         fake_img_mask = self._do_if_necessary_saturate_mask(fake_img_mask, saturate=self._opt.do_saturate_mask)

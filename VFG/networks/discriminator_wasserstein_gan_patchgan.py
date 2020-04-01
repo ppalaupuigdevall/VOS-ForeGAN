@@ -35,13 +35,9 @@ class Discriminator(NetworkBase):
 
     def forward(self, x):
         h = self.main(x)
-        print(h.size())
         h = self.conv1(h)
-        print(h.size())
         h = self.conv2(h)
-        print(h.size())
         out_real = self.conv3(h)
-        print(out_real.size())
         return out_real
 
 if __name__ == '__main__':
