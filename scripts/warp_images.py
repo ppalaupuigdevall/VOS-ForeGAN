@@ -36,14 +36,17 @@ def remap_values(values, xmin, xmax, ymin, ymax):
 #https:///GANimation/issues/22 (utilitzen 128 x 128)
 
 resolutions = {0:(140,260), 1:(175,325), 2:(224,416), 3:(280, 520)}
+desired_shape = resolutions[2]
 
-img_dir = '/data/Ponc/DAVIS/JPEGImages/480p/bear/'
-flo_dir = '/data/Ponc/DAVIS/OpticalFlows/bear/'
-mask_dir = '/data/Ponc/DAVIS/Annotations/480p/bear/'
+img_dir = '/data/Ponc/DAVIS/JPEGImages/480p/bus/'
+flo_dir = '/data/Ponc/DAVIS/OpticalFlows/bus/'
+mask_dir = '/data/Ponc/DAVIS/Annotations/480p/bus/'
 
 img_name = '00000.jpg'
 flo_name = '000000.flo'
 mask_name = '00000.png'
+
+
 
 flow = readFlow(os.path.join(flo_dir, flo_name))
 img = cv2.imread(os.path.join(img_dir, img_name))
@@ -52,6 +55,20 @@ mask = cv2.imread(os.path.join(mask_dir, mask_name))
 mask_bg = cv2.bitwise_not(mask)
 print(mask.shape)
 masked_img = cv2.bitwise_and(img, mask)
+
+I_1_warped = warp_flow(masked_img, flow)
+flo_name = '000001.flo'
+flow = readFlow(os.path.join(flo_dir, flo_name))
+I_2_warped = warp_flow(I_1_warped, flow)
+
+flo_name = '000002.flo'
+flow = readFlow(os.path.join(flo_dir, flo_name))
+I_3_warped = warp_flow(I_2_warped, flow)
+
+I_1_warped_rsz = resize_img(I_1_warped, desired_shape)
+I_2_warped_rsz = resize_img(I_2_warped, desired_shape)
+I_3_warped_rsz = resize_img(I_3_warped, desired_shape)
+
 masked_img_bg = cv2.bitwise_and(img, mask_bg)
 u = flow[:,:,0]
 v = flow[:,:,1]
@@ -60,7 +77,6 @@ flow_v_remaped = remap_values(v, -20, 20, 0, 255)
 
 # Resize ori to warped's shape
 desired_shape = img_warped.shape[:2]
-desired_shape = resolutions[2]
 img_ori_resized = resize_img(img, desired_shape)
 masked_img_resized = resize_img(masked_img, desired_shape)
 masked_bg_resized = resize_img(masked_img_bg, desired_shape)
@@ -81,3 +97,6 @@ if(save):
     cv2.imwrite('./imgs/flow_u_resized.jpg', flow_u_remaped_resized)
     cv2.imwrite('./imgs/masked_img.jpg', masked_img_resized)
     cv2.imwrite('./imgs/masked_img_bg.jpg', masked_bg_resized)
+    cv2.imwrite('./imgs/I1_warp.jpg', I_1_warped_rsz)
+    cv2.imwrite('./imgs/I2_warp.jpg', I_2_warped_rsz)
+    cv2.imwrite('./imgs/I3_warp.jpg', I_3_warped_rsz)

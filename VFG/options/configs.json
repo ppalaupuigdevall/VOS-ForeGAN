@@ -5,7 +5,7 @@
         "OF_dir": "/data/Ponc/DAVIS/OpticalFlows/",
         "mask_dir": "/data/Ponc/DAVIS/Annotations/480p/",
         "resolution": [224,416],
-        "T": 6,
+        "T": 4,
         "batch_size":2
     },
     

@@ -87,6 +87,8 @@ class DavisDataset(data.Dataset):
             if(i==0):
                 mask = cv2.imread(os.path.join(self.mask_dir, cat, self.masks_by_cat[cat][0]))
                 masked_img = cv2.bitwise_and(img, mask)
+                masked_img_ori = masked_img.copy()
+                
                 masked_img = resize_img(masked_img, self.resolution)
                 masked_img = self.transform_img(masked_img)
 
@@ -96,9 +98,12 @@ class DavisDataset(data.Dataset):
                 masked_img_bg = self.transform_img(masked_img_bg)
 
 
-            if(i<self.T-1):
+            elif(i<self.T-1):
                 flow = readFlow(OFs_paths[i])
-                warped_img = resize_img(warp_flow(img, flow), self.resolution)
+            
+                warped_img = warp_flow(masked_img_ori, flow)
+                masked_img_ori = warped_img.copy()
+                warped_img = resize_img(warped_img, self.resolution)
                 u = flow[:,:,0]
                 v = flow[:,:,1]
                 flow_u_remaped = remap_values(u, -20, 20, 0, 255)
@@ -113,6 +118,7 @@ class DavisDataset(data.Dataset):
                 OFs.append(x)
                 warped_img = self.transform_img(warped_img)
                 warped_imgs.append(warped_img)
+                
 
             img = resize_img(img, self.resolution)
             img = self.transform_img(img)
