@@ -266,12 +266,20 @@ class ForestGAN(BaseModel):
 
 
     def _forward_D(self):
-
-        self._loss_df_real  = torch.cuda.FloatTensor([0])
-        self._loss_df_f  = torch.cuda.FloatTensor([0])
         
-        self._loss_db_real  = torch.cuda.FloatTensor([0])
-        self._loss_db_real  = torch.cuda.FloatTensor([0])
+        # NOTE: To compute gradient penalty we need the generated fake samples and the real samples used for each t and for FG/BG
+        # That is, we will compute one gradient penalty for the fg and one for the background
+        real_samples_fg = []
+        fake_samples_fg = []
+        real_samples_bg = []
+        fake_samples_bg = []
+
+
+        self._loss_df_real = torch.cuda.FloatTensor([0])
+        self._loss_df_fake = torch.cuda.FloatTensor([0])
+        
+        self._loss_db_real = torch.cuda.FloatTensor([0])
+        self._loss_db_fake = torch.cuda.FloatTensor([0])
 
         for t in range(t):    
             # generate fake samples
@@ -284,27 +292,16 @@ class ForestGAN(BaseModel):
             self._loss_df_fake = self._loss_df_fake + self._compute_loss_D(d_fake_fg, False)
 
             # Db(real_bg_patches) & Db(fake_bg_patches)
+            paches_bg_real = self.real_bg_patches
+            d_real_bg = self._Db(paches_bg_real)
+            self._loss_db_real = self._loss_db_real + self._compute_loss_D(d_real_bg, True)
             
-        
-        
-        
-        
-        # generate fake images
-        fake_imgs, fake_img_mask = self._G.forward(self._real_img, self._desired_cond)
-        fake_img_mask = self._do_if_necessary_saturate_mask(fake_img_mask, saturate=self._opt.do_saturate_mask)
-        fake_imgs_masked = fake_img_mask * self._real_img + (1 - fake_img_mask) * fake_imgs
+            patches_bg_fake = self._extract_patches(Inext_fake_bg)            
+            d_fake_bg = self._Db(patches_bg_fake)
+            self._loss_db_fake = self._loss_db_fake + self._compute_loss_D(d_fake_bg, False)
 
-        # D(real_I)
-        d_real_img_prob, d_real_img_cond = self._D.forward(self._real_img)
-        self._loss_d_real = self._compute_loss_D(d_real_img_prob, True) * self._opt.lambda_D_prob
-        self._loss_d_cond = self._criterion_D_cond(d_real_img_cond, self._real_cond) / self._B * self._opt.lambda_D_cond
+        return self._loss_df_fake + self._loss_df_real + self._loss_db_fake + self._loss_db_real, real_samples_fg, fake_samples_fg, real_samples_bg, fake_samples_bg
 
-        # D(fake_I)
-        d_fake_desired_img_prob, _ = self._D.forward(fake_imgs_masked.detach())
-        self._loss_d_fake = self._compute_loss_D(d_fake_desired_img_prob, False) * self._opt.lambda_D_prob
-
-        # combine losses
-        return self._loss_d_real + self._loss_d_cond + self._loss_d_fake, fake_imgs_masked
 
     def _gradinet_penalty_D(self, fake_imgs_masked):
         # interpolate sample
