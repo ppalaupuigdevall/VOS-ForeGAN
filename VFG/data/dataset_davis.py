@@ -36,7 +36,6 @@ def remap_values(values, xmin, xmax, ymin, ymax):
 
 class DavisDataset(data.Dataset):
     
-
     def __init__(self, conf):
         super(DavisDataset, self).__init__()
         

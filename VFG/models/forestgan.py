@@ -15,6 +15,7 @@ class ForestGAN(BaseModel):
         super(ForestGAN, self).__init__(opt)
         self._name = 'ForestGAN'
 
+        self._T = 4 
         # create networks
         self._init_create_networks()
 
@@ -30,11 +31,13 @@ class ForestGAN(BaseModel):
 
 
     def set_input(self, sample):
-        self._imgs = sample['imgs'] # [b0, b1, ..., bt-1]
-        self._OFs = sample['OFs'] # [b0, b1, ..., bt-1]
-        self._warped_imgs = sample['warped_imgs'] # [b0, b1, ..., bt-1]
-        self._mask_f = sample['mask_f'] 
-        self._mask_b = sample['mask_b']
+        self._imgs = sample['imgs'] # [0, 1, ..., t-1] REAL IMAGES
+        self._OFs = sample['OFs'] # [0, 1, ..., t-1]
+        self._warped_imgs = sample['warped_imgs'] # [0, 1, ..., t-1]
+        self._curr_f = sample['mask_f']
+        self._first_fg = sample['mask_f'] 
+        self._curr_b = sample['mask_b']
+        self._first_bg = sample['mask_b']
 
     def _init_create_networks(self):
         
@@ -97,28 +100,36 @@ class ForestGAN(BaseModel):
 
     def _init_losses(self):
         # define loss functions
-        self._loss_Gs_rec = torch.nn.MSELoss().cuda()
+        self._criterion_Gs_rec = torch.nn.MSELoss().cuda()
 
         # init losses G
         self._loss_g_fg = torch.cuda.FloatTensor([0])
         self._loss_g_bg = torch.cuda.FloatTensor([0])
-        self._loss_g_fb_rec_img = torch.cuda.FloatTensor([0])
+        self._loss_g_fb_rec = torch.cuda.FloatTensor([0])
         
-        # init losses D # TODO
-        self._loss_d_real = Variable(self._Tensor([0]))
-        self._loss_d_fake = Variable(self._Tensor([0]))
-        self._loss_d_gp = Variable(self._Tensor([0]))
+        # init losses D
+        self._loss_df_real  = torch.cuda.FloatTensor([0])
+        self._loss_df_fake = torch.cuda.FloatTensor([0])
+        self._loss_df_gp = torch.cuda.FloatTensor([0])
+        
+        self._loss_df_real  = torch.cuda.FloatTensor([0])
+        self._loss_df_fake  = torch.cuda.FloatTensor([0])
+        self._loss_df_gp = torch.cuda.FloatTensor([0])
 
     def set_train(self):
-        self._G.train()
-        self._D.train()
+        self._Gf.train()
+        self._Df.train()
+        self._Gb.train()
+        self._Db.train()
         self._is_train = True
 
     def set_eval(self):
-        self._G.eval()
+        self._Gf.eval()
+        self._Df.eval()
+        self._Gb.eval()
+        self._Db.eval()
         self._is_train = False
 
-    # get image paths
 
     def forward(self, sample, keep_data_for_visuals=False, return_estimates=False):
         if not self._is_train:
@@ -209,7 +220,7 @@ class ForestGAN(BaseModel):
             loss_D.backward()
             self._optimizer_D.step()
             
-            loss_D_gp= self._gradinet_penalty_D(fake_imgs_masked)
+            loss_D_gp = self._gradinet_penalty_D(fake_imgs_masked)
             self._optimizer_D.zero_grad()
             loss_D_gp.backward()
             self._optimizer_D.step()
@@ -223,54 +234,61 @@ class ForestGAN(BaseModel):
 
     def _forward_G(self, keep_data_for_visuals):
         
+        self._loss_g_fg = torch.cuda.FloatTensor([0])
+        self._loss_g_bg = torch.cuda.FloatTensor([0])
+        self._loss_g_fb_rec = torch.cuda.FloatTensor([0])
 
-        # generate fake images
-        fake_imgs, fake_img_mask = self._G.forward(self._real_img, self._desired_cond)
-        fake_img_mask = self._do_if_necessary_saturate_mask(fake_img_mask, saturate=self._opt.do_saturate_mask)
-        fake_imgs_masked = fake_img_mask * self._real_img + (1 - fake_img_mask) * fake_imgs
+        for t in range(self._T):
+            
+            # generate fake samples
+            Inext_fake, Inext_fake_fg, Inext_fake_bg = self._generate_fake_samples(t)
+            self._mask_f = Inext_fake_fg 
+            # Fake fgs
+            d_fake_fg = self._Df(Inext_fake_fg)
+            self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg)
+            
+            # Fake bgs
+            patches_Inext_bg = self._extract_patches(Inext_fake_bg)
+            d_fake_bg = self._Db(patches_Inext_bg)
+            self._loss_g_bg = self._loss_g_bg + self._compute_loss_D(d_fake_bg)
+            
+            # Fake images
+            self._loss_g_fb_rec = self._loss_g_fb_rec + self._criterion_Gs_rec(self._imgs[t], Inext_fake)
 
-        # D(G(Ic1, c2)*M) masked
-        d_fake_desired_img_masked_prob, d_fake_desired_img_masked_cond = self._D.forward(fake_imgs_masked)
-        self._loss_g_masked_fake = self._compute_loss_D(d_fake_desired_img_masked_prob, True) * self._opt.lambda_D_prob
-        self._loss_g_masked_cond = self._criterion_D_cond(d_fake_desired_img_masked_cond, self._desired_cond) / self._B * self._opt.lambda_D_cond
+        return self._loss_g_fb_rec + self._loss_g_fg + self._loss_g_bg
 
-        # G(G(Ic1,c2), c1)
-        rec_real_img_rgb, rec_real_img_mask = self._G.forward(fake_imgs_masked, self._real_cond)
-        rec_real_img_mask = self._do_if_necessary_saturate_mask(rec_real_img_mask, saturate=self._opt.do_saturate_mask)
-        rec_real_imgs = rec_real_img_mask * fake_imgs_masked + (1 - rec_real_img_mask) * rec_real_img_rgb
 
-        # l_cyc(G(G(Ic1,c2), c1)*M)
-        self._loss_g_cyc = self._criterion_cycle(rec_real_imgs, self._real_img) * self._opt.lambda_cyc
+    def _generate_fake_samples(self, t):
+        Inext_fake_fg, mask_next_fg = self._Gf(self._curr_f, self._OFs[t], self._warped_imgs[t])
+        Inext_fake_bg = self._Gb(self._curr_b, self._OFs[t])
+        Inext_fake = (1 - mask_next_fg) * Inext_fake_bg + Inext_fake_fg
+        return Inext_fake, Inext_fake_fg, Inext_fake_bg
 
-        # loss mask
-        self._loss_g_mask_1 = torch.mean(fake_img_mask) * self._opt.lambda_mask
-        self._loss_g_mask_2 = torch.mean(rec_real_img_mask) * self._opt.lambda_mask
-        self._loss_g_mask_1_smooth = self._compute_loss_smooth(fake_img_mask) * self._opt.lambda_mask_smooth
-        self._loss_g_mask_2_smooth = self._compute_loss_smooth(rec_real_img_mask) * self._opt.lambda_mask_smooth
-
-        # keep data for visualization
-        if keep_data_for_visuals:
-            self._vis_real_img = util.tensor2im(self._input_real_img)
-            self._vis_fake_img_unmasked = util.tensor2im(fake_imgs.data)
-            self._vis_fake_img = util.tensor2im(fake_imgs_masked.data)
-            self._vis_fake_img_mask = util.tensor2maskim(fake_img_mask.data)
-            self._vis_real_cond = self._input_real_cond.cpu()[0, ...].numpy()
-            self._vis_desired_cond = self._input_desired_cond.cpu()[0, ...].numpy()
-            self._vis_batch_real_img = util.tensor2im(self._input_real_img, idx=-1)
-            self._vis_batch_fake_img_mask = util.tensor2maskim(fake_img_mask.data, idx=-1)
-            self._vis_batch_fake_img = util.tensor2im(fake_imgs_masked.data, idx=-1)
-            self._vis_rec_img_unmasked = util.tensor2im(rec_real_img_rgb.data)
-            self._vis_rec_real_img = util.tensor2im(rec_real_imgs.data)
-            self._vis_rec_real_img_mask = util.tensor2maskim(rec_real_img_mask.data)
-            self._vis_batch_rec_real_img = util.tensor2im(rec_real_imgs.data, idx=-1)
-
-        # combine losses
-        return self._loss_g_masked_fake + self._loss_g_masked_cond + \
-               self._loss_g_cyc + \
-               self._loss_g_mask_1 + self._loss_g_mask_2 + \
-               self._loss_g_mask_1_smooth + self._loss_g_mask_2_smooth
 
     def _forward_D(self):
+
+        self._loss_df_real  = torch.cuda.FloatTensor([0])
+        self._loss_df_f  = torch.cuda.FloatTensor([0])
+        
+        self._loss_db_real  = torch.cuda.FloatTensor([0])
+        self._loss_db_real  = torch.cuda.FloatTensor([0])
+
+        for t in range(t):    
+            # generate fake samples
+            Inext_fake, Inext_fake_fg, Inext_fake_bg = self._generate_fake_samples(t)
+
+            # Df(real_fg) & Df(fake_fg)
+            d_real_fg = self._Df(self.first_fg)
+            self._loss_df_real = self._loss_df_real + self._compute_loss_D(d_real_fg, True)
+            d_fake_fg = self._Df(Inext_fake_fg)
+            self._loss_df_fake = self._loss_df_fake + self._compute_loss_D(d_fake_fg, False)
+
+            # Db(real_bg_patches) & Db(fake_bg_patches)
+            
+        
+        
+        
+        
         # generate fake images
         fake_imgs, fake_img_mask = self._G.forward(self._real_img, self._desired_cond)
         fake_img_mask = self._do_if_necessary_saturate_mask(fake_img_mask, saturate=self._opt.do_saturate_mask)
