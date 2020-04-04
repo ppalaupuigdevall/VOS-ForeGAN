@@ -7,7 +7,7 @@ from .models import BaseModel
 from networks.networks import NetworksFactory
 import os
 import numpy as np
-
+import torch.functional as F
 
 class ForestGAN(BaseModel):
     def __init__(self, opt):
@@ -15,7 +15,7 @@ class ForestGAN(BaseModel):
         super(ForestGAN, self).__init__(opt)
         self._name = 'ForestGAN'
 
-        self._T = 4 
+        self._T = 4
         # create networks
         self._init_create_networks()
 
@@ -38,6 +38,18 @@ class ForestGAN(BaseModel):
         self._first_fg = sample['mask_f'] 
         self._curr_b = sample['mask_b']
         self._first_bg = sample['mask_b']
+        self._real_patches_bg = self._extract_real_patches(self._first_bg)
+
+    def _extract_real_patches(self, first_fg):
+        kernel = torch.ones(1,3,60,112)
+        output = F.conv2d(first_fg + 1.0, kernel, stride=(20,36))
+        print(output.size())
+        print(output[0,:,:,:])
+        # TODO: We have to look the positions where output == 0.0 (background patches)
+        # Then we have to take patches as far as possible each other 
+        fg = first_bg.cuda()
+
+        
 
     def _init_create_networks(self):
         
@@ -112,9 +124,9 @@ class ForestGAN(BaseModel):
         self._loss_df_fake = torch.cuda.FloatTensor([0])
         self._loss_df_gp = torch.cuda.FloatTensor([0])
         
-        self._loss_df_real  = torch.cuda.FloatTensor([0])
-        self._loss_df_fake  = torch.cuda.FloatTensor([0])
-        self._loss_df_gp = torch.cuda.FloatTensor([0])
+        self._loss_db_real  = torch.cuda.FloatTensor([0])
+        self._loss_db_fake  = torch.cuda.FloatTensor([0])
+        self._loss_db_gp = torch.cuda.FloatTensor([0])
 
     def set_train(self):
         self._Gf.train()
@@ -208,29 +220,35 @@ class ForestGAN(BaseModel):
 
     def optimize_parameters(self, train_generator=True, keep_data_for_visuals=False):
         if self._is_train:
-            # convert tensor to variables
-            self._B = self._input_real_img.size(0)
-            self._real_img = Variable(self._input_real_img)
-            self._real_cond = Variable(self._input_real_cond)
-            self._desired_cond = Variable(self._input_desired_cond)
 
-            # train D        
-            loss_D, fake_imgs_masked = self._forward_D()
-            self._optimizer_D.zero_grad()
+            loss_D, real_samples_fg, fake_samples_fg, real_samples_bg, fake_samples_bg = self._forward_D()
+            self._optimizer_Df.zero_grad()
+            self._optimizer_Db.zero_grad()
             loss_D.backward()
-            self._optimizer_D.step()
-            
-            loss_D_gp = self._gradinet_penalty_D(fake_imgs_masked)
-            self._optimizer_D.zero_grad()
-            loss_D_gp.backward()
-            self._optimizer_D.step()
+            self._optimizer_Df.step()
+            self._optimizer_Db.step()
 
-            # train G
+            self._loss_df_gp = torch.cuda.FloatTensor([0])
+            self._loss_db_gp = torch.cuda.FloatTensor([0])
+
+            for t in range(self._T):
+                self._loss_df_gp = self._loss_df_gp + self._gradient_penalty_Df(real_samples_fg[t], fake_samples_fg[t]) 
+                self._loss_db_gp = self._loss_db_gp + self._gradinet_penalty_Db(real_samples_bg[t], fake_samples_bg[t])               
+
+            loss_D_gp = self._loss_df_gp + self._loss_db_gp
+            loss_D_gp.backward()
+            self._optimizer_Df.step()
+            self._optimizer_Db.step()
+
+             # train G
             if train_generator:
                 loss_G = self._forward_G(keep_data_for_visuals)
-                self._optimizer_G.zero_grad()
+                self._optimizer_Gf.zero_grad()
+                self._optimizer_Gb.zero_grad()
                 loss_G.backward()
-                self._optimizer_G.step()
+                self._optimizer_Gf.step()
+                self._optimizer_Gf.step()
+
 
     def _forward_G(self, keep_data_for_visuals):
         
@@ -266,7 +284,6 @@ class ForestGAN(BaseModel):
 
 
     def _forward_D(self):
-        
         # NOTE: To compute gradient penalty we need the generated fake samples and the real samples used for each t and for FG/BG
         # That is, we will compute one gradient penalty for the fg and one for the background
         real_samples_fg = []
@@ -274,25 +291,24 @@ class ForestGAN(BaseModel):
         real_samples_bg = []
         fake_samples_bg = []
 
-
         self._loss_df_real = torch.cuda.FloatTensor([0])
         self._loss_df_fake = torch.cuda.FloatTensor([0])
         
         self._loss_db_real = torch.cuda.FloatTensor([0])
         self._loss_db_fake = torch.cuda.FloatTensor([0])
 
-        for t in range(t):    
+        for t in range(self._T):    
             # generate fake samples
             Inext_fake, Inext_fake_fg, Inext_fake_bg = self._generate_fake_samples(t)
-
+            
             # Df(real_fg) & Df(fake_fg)
-            d_real_fg = self._Df(self.first_fg)
+            d_real_fg = self._Df(self.first_fg) # NOTE: here we could use lucida dream
             self._loss_df_real = self._loss_df_real + self._compute_loss_D(d_real_fg, True)
             d_fake_fg = self._Df(Inext_fake_fg)
             self._loss_df_fake = self._loss_df_fake + self._compute_loss_D(d_fake_fg, False)
 
             # Db(real_bg_patches) & Db(fake_bg_patches)
-            paches_bg_real = self.real_bg_patches
+            paches_bg_real = self.real_bg_patches # TODO
             d_real_bg = self._Db(paches_bg_real)
             self._loss_db_real = self._loss_db_real + self._compute_loss_D(d_real_bg, True)
             
@@ -303,11 +319,13 @@ class ForestGAN(BaseModel):
         return self._loss_df_fake + self._loss_df_real + self._loss_db_fake + self._loss_db_real, real_samples_fg, fake_samples_fg, real_samples_bg, fake_samples_bg
 
 
-    def _gradinet_penalty_D(self, fake_imgs_masked):
+    def _gradient_penalty_Df(self, real_samples, fake_samples):
         # interpolate sample
-        alpha = torch.rand(self._B, 1, 1, 1).cuda().expand_as(self._real_img)
-        interpolated = Variable(alpha * self._real_img.data + (1 - alpha) * fake_imgs_masked.data, requires_grad=True)
-        interpolated_prob, _ = self._D(interpolated)
+        # real_samples are always the first foregrounds (B, 3, H, W)
+        # Fake samples are the foregrounds generated in each timestep
+        alpha = torch.rand(self._B, 1, 1, 1).cuda().expand_as(real_samples)
+        interpolated = Variable(alpha * real_samples.data + (1 - alpha) * fake_samples.data, requires_grad=True)
+        interpolated_prob, _ = self._Df(interpolated)
 
         # compute gradients
         grad = torch.autograd.grad(outputs=interpolated_prob,
@@ -320,16 +338,34 @@ class ForestGAN(BaseModel):
         # penalize gradients
         grad = grad.view(grad.size(0), -1)
         grad_l2norm = torch.sqrt(torch.sum(grad ** 2, dim=1))
-        self._loss_d_gp = torch.mean((grad_l2norm - 1) ** 2) * self._opt.lambda_D_gp
+        loss_d_gp = torch.mean((grad_l2norm - 1) ** 2)
 
-        return self._loss_d_gp
+        return loss_d_gp
+
+    def _gradient_penalty_Db(self, real_samples, fake_samples):
+        # interpolate sample
+        alpha = torch.rand(self._B, 1, 1, 1).cuda().expand_as(self.real_patches)
+        interpolated = Variable(alpha * real_samples.data + (1 - alpha) * fake_samples.data, requires_grad=True)
+        interpolated_prob, _ = self._Df(interpolated)
+
+        # compute gradients
+        grad = torch.autograd.grad(outputs=interpolated_prob,
+                                   inputs=interpolated,
+                                   grad_outputs=torch.ones(interpolated_prob.size()).cuda(),
+                                   retain_graph=True,
+                                   create_graph=True,
+                                   only_inputs=True)[0]
+
+        # penalize gradients
+        grad = grad.view(grad.size(0), -1)
+        grad_l2norm = torch.sqrt(torch.sum(grad ** 2, dim=1))
+        loss_d_gp = torch.mean((grad_l2norm - 1) ** 2)
+
+        return loss_d_gp
 
     def _compute_loss_D(self, estim, is_real):
         return -torch.mean(estim) if is_real else torch.mean(estim)
 
-    def _compute_loss_smooth(self, mat):
-        return torch.sum(torch.abs(mat[:, :, :, :-1] - mat[:, :, :, 1:])) + \
-               torch.sum(torch.abs(mat[:, :, :-1, :] - mat[:, :, 1:, :]))
 
     def get_current_errors(self):
         loss_dict = OrderedDict([('g_fake', self._loss_g_fake.data[0]),

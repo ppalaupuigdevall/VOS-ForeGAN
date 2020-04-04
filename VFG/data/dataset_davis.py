@@ -136,15 +136,29 @@ class DavisDataset(data.Dataset):
         return self.num_categories
 
 
+
+def extract_bg_patches(first_fg):
+    
+    kernel = torch.ones(1,3,60,112)
+    output = F.conv2d(first_fg + 1.0, kernel, stride=(20,36))
+    print(output.size())
+    print(output[0,:,:,:])
+    # TODO: We have 
+
 if __name__ == '__main__':
     d = DavisDataset('./VFG/options/configs.json')
     dl = data.DataLoader(d, batch_size=5)
     bat = next(iter(dl))
     print(bat.keys())
     T = d.T
+    import torch
+    import torch.nn.functional as F
+    extract_bg_patches(bat['mask_f'])
     for t in range(T):
-        print(bat['imgs'][t].size())
-    
+        print("Fmask")
+        print(bat['mask_f'].size())
+        print(torch.min(bat['mask_f']))
+
     
     # print(bat['imgs'][0][0,:,0,0])
     # print(bat['OFs'][0][0,:,0,0])
@@ -157,10 +171,3 @@ if __name__ == '__main__':
     for i, val in enumerate(dl):
         print(i, val.keys())
         # print(val['imgs'])
-    import torch
-    print("mask range")
-    print(torch.min(bat['mask_f']))
-    print(torch.max(bat['mask_f']))
-    print("img range")
-    print(torch.min(bat['imgs'][0]))
-    print(torch.max(bat['imgs']))
