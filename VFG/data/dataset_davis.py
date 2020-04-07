@@ -9,6 +9,28 @@ from utils_f.utils_flow import warp_flow
 from utils_f.utils_flow import draw_flow
 from utils_f.utils_flow import readFlow
 
+def tensor2im(img, imtype=np.uint8, unnormalize=True, idx=0, nrows=None):
+    # select a sample or create grid if img is a batch
+    if len(img.shape) == 4:
+        nrows = nrows if nrows is not None else int(math.sqrt(img.size(0)))
+        img = img[idx] if idx >= 0 else torchvision.utils.make_grid(img, nrows)
+
+    img = img.cpu().float()
+    if unnormalize:
+        mean = [0.5, 0.5, 0.5]
+        std = [0.5, 0.5, 0.5]
+
+        for i, m, s in zip(img, mean, std):
+            i.mul_(s).add_(m)
+
+    image_numpy = img.numpy()
+    image_numpy_t = np.transpose(image_numpy, (1, 2, 0))
+    image_numpy_t = image_numpy_t*254.0
+
+    return image_numpy_t.astype(imtype)
+
+
+
 def resize_img(img, size):
     img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     resi = transforms.Compose([transforms.Resize(size)])
@@ -136,28 +158,69 @@ class DavisDataset(data.Dataset):
         return self.num_categories
 
 
-
-def extract_bg_patches(first_fg):
+def extract_bg_patches(first_fg, first_bg, batch_size = 5):
     
+    kh, kw, stride_h, stride_w = 60,112,20,36
     kernel = torch.ones(1,3,60,112)
     output = F.conv2d(first_fg + 1.0, kernel, stride=(20,36))
-    print(output.size())
-    print(output[0,:,:,:])
-    # TODO: We have 
+    convsize = output.size()[-1]
+    indexes = torch.le(output, 0.001)
+    
+    print(output[indexes])
+    
+    N = 10
+    nonzero_indexes = []
+    nonzero_elements = [0] * batch_size
+    for i in range(batch_size):
+        cerveseta = indexes[i,0,:,:]
+        nonz = torch.nonzero(cerveseta) # [nelem,2]
+        nonzero_indexes.append(nonz)
+        nelem = nonz.size()[0]
+        nonzero_elements[i] = nelem
+        N = min(nelem, N)
 
+    image_patches = torch.zeros(batch_size,N,3,kh,kw)
+    to_image_coords = torch.tensor([stride_h, stride_w]).expand((N,2))
+    img_indexes = torch.zeros(batch_size, N, 2)
+
+    for i in range(batch_size):
+        random_integers = np.unique(np.random.randint(0,nonzero_elements[i],N))
+        while(random_integers.shape[0]<N):
+            random_integers = np.unique(np.random.randint(0,nonzero_elements[i],N))
+        conv_indexes = nonzero_indexes[i][random_integers]
+        img_indexes[i, :, :] = conv_indexes * to_image_coords
+
+    for b in range(batch_size):
+        for n in range(N):
+            P1 = int(img_indexes[b,n,0])
+            P2 = int(img_indexes[b,n,1])
+            image_patches[b, n, :, :, :] = first_bg[b, :, P1 : P1 + kh, P2:P2+kw]
+    
+    sample_patch = cv2.cvtColor(tensor2im(image_patches[0,2,:,:,:]),cv2.COLOR_BGR2RGB)
+    cv2.imwrite('./imgs/sample_patch.jpg', sample_patch)
+    sample_patch2 = cv2.cvtColor(tensor2im(image_patches[1,2,:,:,:]),cv2.COLOR_BGR2RGB)
+    cv2.imwrite('./imgs/sample_patch2.jpg', sample_patch2)
+    sample_patch3 = cv2.cvtColor(tensor2im(image_patches[2,2,:,:,:]),cv2.COLOR_BGR2RGB)
+    cv2.imwrite('./imgs/sample_patch3.jpg', sample_patch3)
+    sample_patch4 = cv2.cvtColor(tensor2im(image_patches[3,2,:,:,:]),cv2.COLOR_BGR2RGB)
+    cv2.imwrite('./imgs/sample_patch4.jpg', sample_patch4)
+    sample_patch5 = cv2.cvtColor(tensor2im(image_patches[4,2,:,:,:]),cv2.COLOR_BGR2RGB)
+    cv2.imwrite('./imgs/sample_patch5.jpg', sample_patch5)
+
+    
 if __name__ == '__main__':
     d = DavisDataset('./VFG/options/configs.json')
     dl = data.DataLoader(d, batch_size=5)
     bat = next(iter(dl))
-    print(bat.keys())
+    # print(bat.keys())
     T = d.T
     import torch
     import torch.nn.functional as F
-    extract_bg_patches(bat['mask_f'])
-    for t in range(T):
-        print("Fmask")
-        print(bat['mask_f'].size())
-        print(torch.min(bat['mask_f']))
+    extract_bg_patches(bat['mask_f'], bat['imgs'][0])
+    # for t in range(T):
+        # print("Fmask")
+        # print(bat['mask_f'].size())
+        # print(torch.min(bat['mask_f']))
 
     
     # print(bat['imgs'][0][0,:,0,0])
@@ -168,6 +231,6 @@ if __name__ == '__main__':
     # tensor([0.5569, 0.5216])
     # tensor([-0.9373, -0.9451, -0.9451])
     # tensor([-1., -1., -1.])
-    for i, val in enumerate(dl):
-        print(i, val.keys())
+    # for i, val in enumerate(dl):
+        # print(i, val.keys())
         # print(val['imgs'])
