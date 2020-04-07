@@ -10,5 +10,5 @@
  * ~~(Easy) Mask warped images~~
  * ~~(Normal) Implement forward of the whole GAN~~
  * ~~(Difficult) Implement forward D~~
- * (Normal & urgent) Write extract_real_patches so it gives REAL patches where there's no foreground
+ * ~~(Normal & urgent) Write extract_real_patches so it gives REAL patches where there's no foreground~~
  * ~~(Ultra difficult) Implement gradient penalty and optimize parameters~~
