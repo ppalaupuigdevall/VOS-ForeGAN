@@ -10,9 +10,10 @@ class ModelsFactory:
     def get_by_name(model_name, *args, **kwargs):
         model = None
 
-        if model_name == 'ForestGAN':
-            from forestgan import ForestGAN
-            model = GANimation(*args, **kwargs)
+        if model_name == 'forestgan':
+            from models.forestgan import ForestGAN
+            
+            model = ForestGAN(*args, **kwargs)
         else:
             raise ValueError("Model %s not recognized." % model_name)
 
@@ -27,6 +28,7 @@ class BaseModel(object):
 
         self._opt = opt
         self._gpu_ids = opt.gpu_ids
+        print(self._gpu_ids)
         self._is_train = opt.is_train
 
        
@@ -90,13 +92,13 @@ class BaseModel(object):
             load_path), 'Weights file not found. Have you trained a model!? We are not providing one' % load_path
 
         optimizer.load_state_dict(torch.load(load_path))
-        print 'loaded optimizer: %s' % load_path
+        print('loaded optimizer: %s' % load_path)
 
     def _save_network(self, network, network_label, epoch_label):
         save_filename = 'net_epoch_%s_id_%s.pth' % (epoch_label, network_label)
         save_path = os.path.join(self._save_dir, save_filename)
         torch.save(network.state_dict(), save_path)
-        print 'saved net: %s' % save_path
+        print('saved net: %s' % save_path)
 
     def _load_network(self, network, network_label, epoch_label):
         load_filename = 'net_epoch_%s_id_%s.pth' % (epoch_label, network_label)
@@ -105,7 +107,7 @@ class BaseModel(object):
             load_path), 'Weights file not found. Have you trained a model!? We are not providing one' % load_path
 
         network.load_state_dict(torch.load(load_path))
-        print 'loaded net: %s' % load_path
+        print('loaded net: %s' % load_path)
 
     def update_learning_rate(self):
         pass

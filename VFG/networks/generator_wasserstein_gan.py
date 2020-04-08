@@ -1,12 +1,12 @@
 import torch.nn as nn
 import numpy as np
-from networks import NetworkBase, NetworksFactory
+from networks.networks import NetworkBase, NetworksFactory
 import torch
 
 class GeneratorF(NetworkBase):
     """Generator. Encoder-Decoder Architecture."""
     def __init__(self, conv_dim=64, c_dim=2, repeat_num=6, T=3):
-        super(Generator, self).__init__()
+        super(GeneratorF, self).__init__()
         self._name = 'generator_wasserstein_gan_f'
         self.T = T
         self.t = 0
@@ -36,7 +36,7 @@ class GeneratorF(NetworkBase):
             curr_dim = curr_dim // 2
 
         self.main = nn.Sequential(*layers)
-
+        self.lafeat = None
         def hook_function(m,i,o):
             self.lafeat = o
             
@@ -68,9 +68,10 @@ class GeneratorF(NetworkBase):
 
             last_layer_dim = int(curr_dim + last_layer_dim/self.factor)
 
+        self.reset_params()
 
     def reset_params(self):
-        self.last_feature = torch.tensor([])
+        self.last_feature = torch.tensor([]).cuda()
         
     def forward(self, If_prev_masked, OFprev2next, If_next_warped): 
         
@@ -124,7 +125,7 @@ class GeneratorB(NetworkBase):
             curr_dim = curr_dim // 2
 
         self.main = nn.Sequential(*layers)
-
+        self.lafeat = None
         def hook_function(m,i,o):
             self.lafeat = o
             
@@ -155,10 +156,10 @@ class GeneratorB(NetworkBase):
             self.attention_reg_packs.append(nn.Sequential(*layers_att))
 
             last_layer_dim = int(curr_dim + last_layer_dim/self.factor)
-
+        self.reset_params()
 
     def reset_params(self):
-        self.last_feature = torch.tensor([])
+        self.last_feature = torch.tensor([]).cuda()
         
     def forward(self, Ib_prev_masked, OFprev2next): 
 

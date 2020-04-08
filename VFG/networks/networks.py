@@ -9,14 +9,15 @@ class NetworksFactory:
     def get_by_name(network_name, *args, **kwargs):
 
         if network_name == 'generator_wasserstein_gan_f':
-            from generator_wasserstein_gan import Generator
-            network = Generator(*args, **kwargs)
+            from networks.generator_wasserstein_gan import GeneratorF
+            network = GeneratorF(*args, **kwargs)
 
         elif network_name == 'generator_wasserstein_gan_b':
-
+            from networks.generator_wasserstein_gan import GeneratorB
+            network = GeneratorB(*args, **kwargs)
             
         elif network_name == 'discriminator_wasserstein_gan':
-            from discriminator_wasserstein_gan_patchgan import Discriminator
+            from networks.discriminator_wasserstein_gan_patchgan import Discriminator
             network = Discriminator(*args, **kwargs)
         else:
             raise ValueError("Network %s not recognized." % network_name)

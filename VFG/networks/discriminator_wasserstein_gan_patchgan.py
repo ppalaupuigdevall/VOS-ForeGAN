@@ -1,6 +1,6 @@
 import torch.nn as nn
 import numpy as np
-from networks import NetworkBase, NetworksFactory
+from networks.networks import NetworkBase, NetworksFactory
 import torch
 class Discriminator(NetworkBase):
     """Discriminator. PatchGAN. Processes patches independently

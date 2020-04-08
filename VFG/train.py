@@ -1,28 +1,26 @@
 import time
 from options.train_options import TrainOptions
-from data.custom_dataset_data_loader import CustomDatasetDataLoader
+from data.dataset_davis import DavisDataset
 from models.models import ModelsFactory
-from utils.tb_visualizer import TBVisualizer
+# from utils.tb_visualizer import TBVisualizer
 from collections import OrderedDict
 import os
+import torch.utils.data as data
 
 
 class Train:
     def __init__(self):
         self._opt = TrainOptions().parse()
-        data_loader_train = CustomDatasetDataLoader(self._opt, is_for_train=True)
-        data_loader_test = CustomDatasetDataLoader(self._opt, is_for_train=False)
+        self._dataset_train = DavisDataset(self._opt)
 
-        self._dataset_train = data_loader_train.load_data()
-        self._dataset_test = data_loader_test.load_data()
+        self._data_loader_train = data.DataLoader(self._dataset_train, self._opt.batch_size)
 
-        self._dataset_train_size = len(data_loader_train)
-        self._dataset_test_size = len(data_loader_test)
+
+        self._dataset_train_size = len(self._dataset_train)
         print('#train images = %d' % self._dataset_train_size)
-        print('#test images = %d' % self._dataset_test_size)
 
         self._model = ModelsFactory.get_by_name(self._opt.model, self._opt)
-        self._tb_visualizer = TBVisualizer(self._opt)
+        # self._tb_visualizer = TBVisualizer(self._opt)
 
         self._train()
 
@@ -41,7 +39,7 @@ class Train:
 
             # save model
             print('saving the model at the end of epoch %d, iters %d' % (i_epoch, self._total_steps))
-            self._model.save(i_epoch)
+            # self._model.save(i_epoch)
 
             # print epoch info
             time_epoch = time.time() - epoch_start_time
@@ -56,38 +54,39 @@ class Train:
     def _train_epoch(self, i_epoch):
         epoch_iter = 0
         self._model.set_train()
-        for i_train_batch, train_batch in enumerate(self._dataset_train):
+        for i_train_batch, train_batch in enumerate(self._data_loader_train):
             iter_start_time = time.time()
 
             # display flags
-            do_visuals = self._last_display_time is None or time.time() - self._last_display_time > self._opt.display_freq_s
-            do_print_terminal = time.time() - self._last_print_time > self._opt.print_freq_s or do_visuals
+            # do_visuals = self._last_display_time is None or time.time() - self._last_display_time > self._opt.display_freq_s
+            do_visuals = False
+            # do_print_terminal = time.time() - self._last_print_time > self._opt.print_freq_s or do_visuals
 
             # train model
             self._model.set_input(train_batch)
             train_generator = ((i_train_batch+1) % self._opt.train_G_every_n_iterations == 0) or do_visuals
-            self._model.optimize_parameters(keep_data_for_visuals=do_visuals, train_generator=train_generator)
+            self._model.optimize_parameters(train_generator=train_generator)
 
             # update epoch info
             self._total_steps += self._opt.batch_size
             epoch_iter += self._opt.batch_size
 
-            # display terminal
-            if do_print_terminal:
-                self._display_terminal(iter_start_time, i_epoch, i_train_batch, do_visuals)
-                self._last_print_time = time.time()
+            # # display terminal
+            # if do_print_terminal:
+            #     self._display_terminal(iter_start_time, i_epoch, i_train_batch, do_visuals)
+            #     self._last_print_time = time.time()
 
-            # display visualizer
-            if do_visuals:
-                self._display_visualizer_train(self._total_steps)
-                self._display_visualizer_val(i_epoch, self._total_steps)
-                self._last_display_time = time.time()
+            # # display visualizer
+            # if do_visuals:
+            #     self._display_visualizer_train(self._total_steps)
+            #     self._display_visualizer_val(i_epoch, self._total_steps)
+            #     self._last_display_time = time.time()
 
-            # save model
-            if self._last_save_latest_time is None or time.time() - self._last_save_latest_time > self._opt.save_latest_freq_s:
-                print('saving the latest model (epoch %d, total_steps %d)' % (i_epoch, self._total_steps))
-                self._model.save(i_epoch)
-                self._last_save_latest_time = time.time()
+            # # save model
+            # if self._last_save_latest_time is None or time.time() - self._last_save_latest_time > self._opt.save_latest_freq_s:
+            #     print('saving the latest model (epoch %d, total_steps %d)' % (i_epoch, self._total_steps))
+            #     self._model.save(i_epoch)
+            #     self._last_save_latest_time = time.time()
 
     def _display_terminal(self, iter_start_time, i_epoch, i_train_batch, visuals_flag):
         errors = self._model.get_current_errors()

@@ -9,27 +9,18 @@ class BaseOptions():
         self._initialized = False
 
     def initialize(self):
-        self._parser.add_argument('--data_dir', type=str, help='path to dataset')
-        self._parser.add_argument('--train_ids_file', type=str, default='train_ids.csv', help='file containing train ids')
-        self._parser.add_argument('--test_ids_file', type=str, default='test_ids.csv', help='file containing test ids')
-        self._parser.add_argument('--images_folder', type=str, default='imgs', help='images folder')
-        self._parser.add_argument('--aus_file', type=str, default='aus_openface.pkl', help='file containing samples aus')
+        self._parser.add_argument('--img_dir',          type=str,   default="/data/Ponc/DAVIS/JPEGImages/480p/",    help='path to imgs folder')
+        self._parser.add_argument('--OF_dir',           type=str,   default="/data/Ponc/DAVIS/OpticalFlows/",       help='path to OFs folder')
+        self._parser.add_argument('--mask_dir',         type=str,   default="/data/Ponc/DAVIS/Annotations/480p/",   help='path to masks folder')
+        self._parser.add_argument('--resolution',       type=tuple, default=(224, 416),                             help='default image resolution')
+        self._parser.add_argument('--T',                type=int,   default=4,                                      help='temporal horizon')
+        self._parser.add_argument('--batch_size',       type=int,   default=2,                                      help='input batch size')
+        self._parser.add_argument('--gpu_ids',          type=str,   default='0',                              help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
 
-        self._parser.add_argument('--load_epoch', type=int, default=-1, help='which epoch to load? set to -1 to use latest cached model')
-        self._parser.add_argument('--batch_size', type=int, default=4, help='input batch size')
-        self._parser.add_argument('--image_size', type=int, default=128, help='input image size')
-        self._parser.add_argument('--cond_nc', type=int, default=17, help='# of conditions')
-        self._parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
-        self._parser.add_argument('--name', type=str, default='experiment_1', help='name of the experiment. It decides where to store samples and models')
-        self._parser.add_argument('--dataset_mode', type=str, default='aus', help='chooses dataset to be used')
-        self._parser.add_argument('--model', type=str, default='ganimation', help='model to run[au_net_model]')
-        self._parser.add_argument('--n_threads_test', default=1, type=int, help='# threads for loading data')
-        self._parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
-        self._parser.add_argument('--serial_batches', action='store_true', help='if true, takes images in order to make batches, otherwise takes them randomly')
-        self._parser.add_argument('--do_saturate_mask', action="store_true", default=False, help='do use mask_fake for mask_cyc')
-
-
-
+        self._parser.add_argument('--model',            type=str,   default='forestgan',                            help='there is only this one so do not change it')
+        self._parser.add_argument('--load_epoch',       type=int,   default=-1,                                     help='which epoch to load? set to -1 to use latest cached model')
+        self._parser.add_argument('--name',             type=str,   default='experiment_1',                         help='name of the experiment. It decides where to store samples and models')
+        self._parser.add_argument('--checkpoints_dir',  type=str,   default='./checkpoints',                        help='models are saved here')
 
         self._initialized = True
 
@@ -42,18 +33,19 @@ class BaseOptions():
         self._opt.is_train = self.is_train
 
         # set and check load_epoch
-        self._set_and_check_load_epoch()
+        # self._set_and_check_load_epoch()
 
         # get and set gpus
         self._get_set_gpus()
 
+        # vars returns a dictionary
         args = vars(self._opt)
 
         # print in terminal args
         self._print(args)
 
         # save args to file
-        self._save(args)
+        # self._save(args)
 
         return self._opt
 
@@ -86,9 +78,11 @@ class BaseOptions():
             if id >= 0:
                 self._opt.gpu_ids.append(id)
 
+
         # set gpu ids
         if len(self._opt.gpu_ids) > 0:
             torch.cuda.set_device(self._opt.gpu_ids[0])
+            print(torch.cuda.current_device())
 
     def _print(self, args):
         print('------------ Options -------------')
@@ -106,3 +100,4 @@ class BaseOptions():
             for k, v in sorted(args.items()):
                 opt_file.write('%s: %s\n' % (str(k), str(v)))
             opt_file.write('-------------- End ----------------\n')
+

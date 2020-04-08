@@ -61,11 +61,9 @@ class DavisDataset(data.Dataset):
     def __init__(self, conf):
         super(DavisDataset, self).__init__()
         
-        with open(conf, 'r') as f:
-            config = json.load(f)["dataset"]
-        self.img_dir = config['img_dir']  
-        self.OF_dir = config['OF_dir']
-        self.mask_dir = config['mask_dir']
+        self.img_dir = conf.img_dir
+        self.OF_dir = conf.OF_dir
+        self.mask_dir = conf.mask_dir
         self.categories = os.listdir(self.OF_dir)
         self.num_categories = len(self.categories)
         print(self.num_categories)
@@ -75,8 +73,8 @@ class DavisDataset(data.Dataset):
             self.OFs_by_cat[cat] = sorted(os.listdir(os.path.join(self.OF_dir, cat)))
             self.masks_by_cat[cat] = sorted(os.listdir(os.path.join(self.mask_dir, cat)))
 
-        self.resolution = (config['resolution'][0], config['resolution'][1])
-        self.T = config["T"]
+        self.resolution = (conf.resolution)
+        self.T = conf.T
         self.create_transform()
         self.shift = False #TODO: set variable to give mask in sample or not depending on score of Discriminator 
     
@@ -166,8 +164,6 @@ def extract_bg_patches(first_fg, first_bg, batch_size = 5):
     convsize = output.size()[-1]
     indexes = torch.le(output, 0.001)
     
-    print(output[indexes])
-    
     N = 10
     nonzero_indexes = []
     nonzero_elements = [0] * batch_size
@@ -195,17 +191,19 @@ def extract_bg_patches(first_fg, first_bg, batch_size = 5):
             P1 = int(img_indexes[b,n,0])
             P2 = int(img_indexes[b,n,1])
             image_patches[b, n, :, :, :] = first_bg[b, :, P1 : P1 + kh, P2:P2+kw]
-    
-    sample_patch = cv2.cvtColor(tensor2im(image_patches[0,2,:,:,:]),cv2.COLOR_BGR2RGB)
-    cv2.imwrite('./imgs/sample_patch.jpg', sample_patch)
-    sample_patch2 = cv2.cvtColor(tensor2im(image_patches[1,2,:,:,:]),cv2.COLOR_BGR2RGB)
-    cv2.imwrite('./imgs/sample_patch2.jpg', sample_patch2)
-    sample_patch3 = cv2.cvtColor(tensor2im(image_patches[2,2,:,:,:]),cv2.COLOR_BGR2RGB)
-    cv2.imwrite('./imgs/sample_patch3.jpg', sample_patch3)
-    sample_patch4 = cv2.cvtColor(tensor2im(image_patches[3,2,:,:,:]),cv2.COLOR_BGR2RGB)
-    cv2.imwrite('./imgs/sample_patch4.jpg', sample_patch4)
-    sample_patch5 = cv2.cvtColor(tensor2im(image_patches[4,2,:,:,:]),cv2.COLOR_BGR2RGB)
-    cv2.imwrite('./imgs/sample_patch5.jpg', sample_patch5)
+
+    return image_patches
+
+    # sample_patch = cv2.cvtColor(tensor2im(image_patches[0,2,:,:,:]),cv2.COLOR_BGR2RGB)
+    # cv2.imwrite('./imgs/sample_patch.jpg', sample_patch)
+    # sample_patch2 = cv2.cvtColor(tensor2im(image_patches[1,2,:,:,:]),cv2.COLOR_BGR2RGB)
+    # cv2.imwrite('./imgs/sample_patch2.jpg', sample_patch2)
+    # sample_patch3 = cv2.cvtColor(tensor2im(image_patches[2,2,:,:,:]),cv2.COLOR_BGR2RGB)
+    # cv2.imwrite('./imgs/sample_patch3.jpg', sample_patch3)
+    # sample_patch4 = cv2.cvtColor(tensor2im(image_patches[3,2,:,:,:]),cv2.COLOR_BGR2RGB)
+    # cv2.imwrite('./imgs/sample_patch4.jpg', sample_patch4)
+    # sample_patch5 = cv2.cvtColor(tensor2im(image_patches[4,2,:,:,:]),cv2.COLOR_BGR2RGB)
+    # cv2.imwrite('./imgs/sample_patch5.jpg', sample_patch5)
 
     
 if __name__ == '__main__':
