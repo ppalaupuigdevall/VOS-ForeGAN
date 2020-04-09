@@ -75,7 +75,8 @@ class GeneratorF(NetworkBase):
         self.reset_params()
 
     def reset_params(self):
-        self.last_feature = torch.tensor([]).cuda()
+        self.last_features = [0] * self.T
+        self.last_features[0] = torch.tensor([]).cuda()
         self.t = 0
         
     def forward(self, If_prev_masked, OFprev2next, If_next_warped): 
@@ -83,12 +84,14 @@ class GeneratorF(NetworkBase):
         x = torch.cat([If_prev_masked, OFprev2next], dim=1)
 
         features = self.main(x)
-        features_ = torch.cat([self.last_feature, features], dim=1) # Concat in channel dimension
-        print("Last feature = ", self.last_feature.size())
+        features_ = torch.cat([self.last_features[self.t], features], dim=1) # Concat in channel dimension
+
+        print("Last feature = ", self.last_features[self.t].size())
         print("features_    = ", features_.size())
         color_mask = self.img_reg_packs[self.t](features_)
         att_mask = self.attention_reg_packs[self.t](features_)
-        self.last_feature = self.reductor[self.t](features_)
+        if(self.t<self.T-2):
+            self.last_features[self.t+1] = self.reductor[self.t](features_)
         
         self.t = self.t + 1
         
@@ -169,7 +172,8 @@ class GeneratorB(NetworkBase):
         self.reset_params()
 
     def reset_params(self):
-        self.last_feature = torch.tensor([]).cuda()
+        self.last_features = [0] * self.T
+        self.last_features[0] = torch.tensor([]).cuda()
         self.t = 0
     def forward(self, Ib_prev_masked, OFprev2next): 
 
@@ -177,10 +181,11 @@ class GeneratorB(NetworkBase):
 
         features = self.main(x)
         to_be_reduced = self.lafeat
-        features = torch.cat([self.last_feature, features], dim=1) # Concat in channel dimension
+        features = torch.cat([self.last_features[self.t], features], dim=1) # Concat in channel dimension
         color_mask = self.img_reg_packs[self.t](features)
         att_mask = self.attention_reg_packs[self.t](features)
-        self.last_feature = self.reductor[self.t](features)
+        if(self.t < self.T -2):
+            self.last_features[self.t+1] = self.reductor[self.t](features)
         self.t = self.t + 1
         # print("t = ", self.t, " T = ", self.T)
         # print("t = ", self.t)
