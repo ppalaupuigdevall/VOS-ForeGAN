@@ -5,7 +5,7 @@ import torch
 
 class GeneratorF(NetworkBase):
     """Generator. Encoder-Decoder Architecture."""
-    def __init__(self, conv_dim=64, c_dim=2, repeat_num=6, T=3):
+    def __init__(self, c_dim, T, conv_dim=64, repeat_num=6):
         super(GeneratorF, self).__init__()
         self._name = 'generator_wasserstein_gan_f'
         self.T = T
@@ -49,7 +49,7 @@ class GeneratorF(NetworkBase):
         self.attention_reg_packs = []
         self.reductor = [] 
         
-        for i in range(T):
+        for i in range(T-1):
             layers_img = []
             layers_reductor = []
             layers_att = []
@@ -67,26 +67,30 @@ class GeneratorF(NetworkBase):
             self.attention_reg_packs.append(nn.Sequential(*layers_att))
 
             last_layer_dim = int(curr_dim + last_layer_dim/self.factor)
+        
+        self.img_reg_packs = nn.ModuleList(self.img_reg_packs)
+        self.attention_reg_packs = nn.ModuleList(self.attention_reg_packs)
+        self.reductor = nn.ModuleList(self.reductor)
 
         self.reset_params()
 
     def reset_params(self):
         self.last_feature = torch.tensor([]).cuda()
+        self.t = 0
         
     def forward(self, If_prev_masked, OFprev2next, If_next_warped): 
         
         x = torch.cat([If_prev_masked, OFprev2next], dim=1)
 
         features = self.main(x)
-        to_be_reduced = self.lafeat
-        features = torch.cat([self.last_feature, features], dim=1) # Concat in channel dimension
-        color_mask = self.img_reg_packs[self.t](features)
-        att_mask = self.attention_reg_packs[self.t](features)
+        features_ = torch.cat([self.last_feature, features], dim=1) # Concat in channel dimension
+        print("Last feature = ", self.last_feature.size())
+        print("features_    = ", features_.size())
+        color_mask = self.img_reg_packs[self.t](features_)
+        att_mask = self.attention_reg_packs[self.t](features_)
+        self.last_feature = self.reductor[self.t](features_)
         
-        self.last_feature = self.reductor[self.t](feat_map)
-        if(self.t == self.T-1):
-            self.reset_params()
-        self.t = (self.t + 1)%self.T
+        self.t = self.t + 1
         
         If_next_masked = att_mask * (If_next_warped + color_mask)  + ((1 - att_mask) * (If_next_warped + color_mask) -1 )
         return  If_next_masked, att_mask
@@ -94,7 +98,7 @@ class GeneratorF(NetworkBase):
 
 class GeneratorB(NetworkBase):
     """Generator. Encoder-Decoder Architecture."""
-    def __init__(self, conv_dim=64, c_dim=2, repeat_num=6, T=3):
+    def __init__(self, c_dim, T, conv_dim=64, repeat_num=6):
         super(GeneratorB, self).__init__()
         self._name = 'generator_wasserstein_gan_b'
         self.T = T
@@ -138,7 +142,7 @@ class GeneratorB(NetworkBase):
         self.attention_reg_packs = []
         self.reductor = [] 
         
-        for i in range(T):
+        for i in range(T-1):
             layers_img = []
             layers_reductor = []
             layers_att = []
@@ -156,11 +160,17 @@ class GeneratorB(NetworkBase):
             self.attention_reg_packs.append(nn.Sequential(*layers_att))
 
             last_layer_dim = int(curr_dim + last_layer_dim/self.factor)
+
+        self.img_reg_packs = nn.ModuleList(self.img_reg_packs)
+        self.attention_reg_packs = nn.ModuleList(self.attention_reg_packs)
+        self.reductor = nn.ModuleList(self.reductor)
+
+        
         self.reset_params()
 
     def reset_params(self):
         self.last_feature = torch.tensor([]).cuda()
-        
+        self.t = 0
     def forward(self, Ib_prev_masked, OFprev2next): 
 
         x = torch.cat([Ib_prev_masked, OFprev2next], dim=1)
@@ -170,11 +180,10 @@ class GeneratorB(NetworkBase):
         features = torch.cat([self.last_feature, features], dim=1) # Concat in channel dimension
         color_mask = self.img_reg_packs[self.t](features)
         att_mask = self.attention_reg_packs[self.t](features)
-        self.last_feature = self.reductor[self.t](feat_map)
-        if(self.t == self.T-1):
-            self.reset_params()
-        self.t = (self.t + 1)%self.T
-        
+        self.last_feature = self.reductor[self.t](features)
+        self.t = self.t + 1
+        # print("t = ", self.t, " T = ", self.T)
+        # print("t = ", self.t)
         Ib_next = att_mask * (Ib_prev_masked) + (1-att_mask)*color_mask # Whole background 
 
         return Ib_next

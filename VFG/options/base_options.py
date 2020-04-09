@@ -13,7 +13,7 @@ class BaseOptions():
         self._parser.add_argument('--OF_dir',           type=str,   default="/data/Ponc/DAVIS/OpticalFlows/",       help='path to OFs folder')
         self._parser.add_argument('--mask_dir',         type=str,   default="/data/Ponc/DAVIS/Annotations/480p/",   help='path to masks folder')
         self._parser.add_argument('--resolution',       type=tuple, default=(224, 416),                             help='default image resolution')
-        self._parser.add_argument('--T',                type=int,   default=4,                                      help='temporal horizon')
+        self._parser.add_argument('--T',                type=int,   default=3,                                      help='temporal horizon')
         self._parser.add_argument('--batch_size',       type=int,   default=2,                                      help='input batch size')
         self._parser.add_argument('--gpu_ids',          type=str,   default='0',                              help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
 

@@ -13,7 +13,7 @@ class Train:
         self._opt = TrainOptions().parse()
         self._dataset_train = DavisDataset(self._opt)
 
-        self._data_loader_train = data.DataLoader(self._dataset_train, self._opt.batch_size)
+        self._data_loader_train = data.DataLoader(self._dataset_train, self._opt.batch_size, drop_last=True)
 
 
         self._dataset_train_size = len(self._dataset_train)
@@ -54,9 +54,10 @@ class Train:
     def _train_epoch(self, i_epoch):
         epoch_iter = 0
         self._model.set_train()
+        print("--- - - - - - - EPOCH ", i_epoch, " - - - - ")
         for i_train_batch, train_batch in enumerate(self._data_loader_train):
             iter_start_time = time.time()
-
+            
             # display flags
             # do_visuals = self._last_display_time is None or time.time() - self._last_display_time > self._opt.display_freq_s
             do_visuals = False
@@ -64,9 +65,9 @@ class Train:
 
             # train model
             self._model.set_input(train_batch)
-            train_generator = ((i_train_batch+1) % self._opt.train_G_every_n_iterations == 0) or do_visuals
+            train_generator = ((i_train_batch+1) % self._opt.train_G_every_n_iterations == 0)
             self._model.optimize_parameters(train_generator=train_generator)
-
+            
             # update epoch info
             self._total_steps += self._opt.batch_size
             epoch_iter += self._opt.batch_size

@@ -1,14 +1,13 @@
 import torch
 import torch.nn as nn
 
-x = torch.ones(2,1,10,10, requires_grad=False) * 0.5
-y = torch.ones(1,2,1,10,10, requires_grad=False)
-z = torch.ones(1,2,1,10,10, requires_grad=False) * 2.0
-a = torch.ones(1,2,1,10,10, requires_grad=False) * 3.0
-b = torch.ones(1,2,1,10,10, requires_grad=False) * 4.0
+x = torch.ones(3,2,2, requires_grad=False) * 0.5
+y = torch.ones(3,2,2, requires_grad=False)
+z = torch.ones(3,2,2, requires_grad=False) * 2.0
+a = torch.ones(3,2,2, requires_grad=False) * 3.0
+b = torch.ones(3,2,2, requires_grad=False) * 4.0
 outputs = [y,z,a,b]
-yza = torch.cat([y,z,a], dim=0)
-print(yza[:,0,0,0,0])
+
 
 
 
@@ -80,15 +79,27 @@ class MyRecurrentModel(nn.Module):
 
 
 
+class Ayuda(nn.Module):
+    def __init__(self):
+        super(Ayuda, self).__init__()
+        self.uasa = nn.ModuleList([nn.Linear(2,2) for x in range(4)])
+    def forward(self, x, t):
+        x = self.uasa[t](x)
+        return x
+
+
+
 
 # model = MyModel()
-model = MyRecurrentModel()
+# model = MyRecurrentModel()
+model = Ayuda()
+
 optimizer = torch.optim.SGD(model.parameters(), lr=0.0001)
 criterion = nn.MSELoss()
 
 # x -> y = f(x) --> Ly = f(x) - y_
 # Lz = f(f(x)) - z_ 
-# 
+
 
 
 for e in range(50):
@@ -97,15 +108,15 @@ for e in range(50):
     total_loss  = torch.zeros(1)
     for t in range(4):
         
-        ims = model(ims)
+        ims = model(ims,t)
         loss = criterion(outputs[t], ims)
+        print(loss)
         total_loss = total_loss + loss
         print("ims = ", torch.mean(ims), " loss = ", loss.item())
     
     print("IEP")
     total_loss.backward()
     optimizer.step()
-
 
 x = torch.ones(2,1,10,10, requires_grad=False) * 1.0
 

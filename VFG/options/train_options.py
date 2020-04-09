@@ -19,7 +19,7 @@ class TrainOptions(BaseOptions):
         self._parser.add_argument('--extra_ch_gb', type=int, default=2, help='number of channels of the input to Gb')
 
         # Optimizers parameters
-        self._parser.add_argument('--train_G_every_n_iterations', type=int, default=5, help='train G every n interations')
+        self._parser.add_argument('--train_G_every_n_iterations', type=int, default=2, help='train G every n interations')
         self._parser.add_argument('--poses_g_sigma', type=float, default=0.06, help='initial learning rate for adam')
         
         self._parser.add_argument('--lr_Gf', type=float, default=0.0001, help='initial learning rate for Gf adam')
