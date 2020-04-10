@@ -19,7 +19,7 @@ class TrainOptions(BaseOptions):
         self._parser.add_argument('--extra_ch_gb', type=int, default=2, help='number of channels of the input to Gb')
 
         # Optimizers parameters
-        self._parser.add_argument('--train_G_every_n_iterations', type=int, default=5, help='train G every n interations')
+        self._parser.add_argument('--train_G_every_n_iterations', type=int, default=1, help='train G every n interations')
         self._parser.add_argument('--poses_g_sigma', type=float, default=0.06, help='initial learning rate for adam')
         
         self._parser.add_argument('--lr_Gf', type=float, default=0.0001, help='initial learning rate for Gf adam')
@@ -39,7 +39,7 @@ class TrainOptions(BaseOptions):
         # Lambdas for losses
         self._parser.add_argument('--lambda_Df_prob', type=float, default=1, help='lambda for real/fake discriminator loss')
         self._parser.add_argument('--lambda_Db_prob', type=float, default=1, help='lambda for real/fake discriminator loss')
-        self._parser.add_argument('--lambda_rec', type=float, default=0.1, help='lambda reconstruction loss')
+        self._parser.add_argument('--lambda_rec', type=float, default=10, help='lambda reconstruction loss')
         self._parser.add_argument('--lambda_Df_gp', type=float, default=1, help='lambda gradient penalty loss')
         self._parser.add_argument('--lambda_Db_gp', type=float, default=1, help='lambda gradient penalty loss')
 

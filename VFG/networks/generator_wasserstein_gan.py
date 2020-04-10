@@ -189,7 +189,9 @@ class GeneratorB(NetworkBase):
         self.t = self.t + 1
         # print("t = ", self.t, " T = ", self.T)
         # print("t = ", self.t)
-        Ib_next = att_mask * (Ib_prev_masked) + (1-att_mask)*color_mask # Whole background 
+        Ib_next = att_mask * (Ib_prev_masked) + (1-att_mask)*color_mask # Whole background cuda0
+        # Ib_next = att_mask * (color_mask) + (1-att_mask)*Ib_prev_masked  # Whole background cuda0
+        
 
         return Ib_next
 

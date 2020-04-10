@@ -77,10 +77,9 @@ class Train:
             #     self._last_print_time = time.time()
 
             # # # display visualizer
-            # if do_visuals:
-            #     self._display_visualizer_train(self._total_steps)
-            #     # self._display_visualizer_val(i_epoch, self._total_steps)
-            #     self._last_display_time = time.time()
+            if do_visuals:
+                self._display_visualizer_train(self._total_steps)
+                self._last_display_time = time.time()
 
             # # save model
             # if self._last_save_latest_time is None or time.time() - self._last_save_latest_time > self._opt.save_latest_freq_s:
@@ -96,7 +95,6 @@ class Train:
     def _display_visualizer_train(self, total_steps):
         self._tb_visualizer.display_current_results(self._model.get_current_visuals(), total_steps, is_train=True)
         self._tb_visualizer.plot_scalars(self._model.get_current_errors(), total_steps, is_train=True)
-        self._tb_visualizer.plot_scalars(self._model.get_current_scalars(), total_steps, is_train=True)
 
     def _display_visualizer_val(self, i_epoch, total_steps):
         val_start_time = time.time()

@@ -12,7 +12,7 @@ from data.dataset_davis import tensor2im
 import cv2
 class ForestGAN(BaseModel):
     def __init__(self, opt):
-        self.ponc = 0
+        
         super(ForestGAN, self).__init__(opt)
         self._name = 'forestgan'
         self._opt = opt
@@ -44,12 +44,11 @@ class ForestGAN(BaseModel):
     def _move_inputs_to_gpu(self, t):
         
         if(t==0):
-            self._curra_f = [0] * (self._T - 1) 
-            self._curra_b = [0] * (self._T - 1)
-            self._curra_fake = [0] * (self._T -1)
-            
+            self._visual_masks = []
+            self._visual_fgs = []
+            self._visual_bgs = []
+            self._visual_fakes = []
             # Move everytrhing to GPU
-            self._curr_imgs = self._imgs[t].cuda()
             self._next_frame_imgs_ori = self._imgs[t+1].cuda()
             self._curr_OFs = self._OFs[t].cuda()
             self._curr_warped_imgs = self._warped_imgs[t].cuda()
@@ -58,13 +57,9 @@ class ForestGAN(BaseModel):
             self._first_fg = self._first_fg.cuda()
             self._first_bg = self._first_bg.cuda()
             self._real_bg_patches = self._real_bg_patches.cuda()
-
-            self._curra_f[0] = self._first_fg.cuda()
-            self._curra_b[0] = self._first_bg.cuda()
             
 
         else:
-            self._curr_imgs = self._imgs[t].cuda()
             self._curr_OFs = self._OFs[t].cuda()
             self._curr_warped_imgs = self._warped_imgs[t].cuda()
             self._next_frame_imgs_ori = self._imgs[t+1].cuda()        
@@ -211,7 +206,7 @@ class ForestGAN(BaseModel):
         self._Db.eval()
         self._is_train = False
 
-    def optimize_parameters(self, train_generator=True):
+    def optimize_parameters(self, train_generator=True, save_imgs = False):
         if self._is_train:
 
             loss_D, real_samples_fg, fake_samples_fg, real_samples_bg, fake_samples_bg = self._forward_D()
@@ -237,22 +232,20 @@ class ForestGAN(BaseModel):
             # train G
             self._Gf.reset_params()
             self._Gb.reset_params()
-            self.ponc = self.ponc + 1
             
             # if train_generator:
-            if(self.ponc%10 == 0):
-                self._save_img(fake_samples_fg, fake_samples_bg)
-                print("Train generator!")
+            if(train_generator):
+                
                 loss_G = self._forward_G()
                 self._optimizer_Gf.zero_grad()
                 self._optimizer_Gb.zero_grad()
                 loss_G.backward()
                 self._optimizer_Gf.step()
                 self._optimizer_Gb.step()
-                self._print_losses()
                 self._Gf.reset_params()
                 self._Gb.reset_params()
-                
+            
+
 
     def _forward_G(self):
 
@@ -281,56 +274,21 @@ class ForestGAN(BaseModel):
             self._loss_g_fb_rec = self._loss_g_fb_rec + self._criterion_Gs_rec(self._next_frame_imgs_ori, Inext_fake) * self._opt.lambda_rec
 
         return self._loss_g_fb_rec + self._loss_g_fg + self._loss_g_bg
-        
-
-    def _forward_G_2(self):
-        
-        self._loss_g_fg = torch.cuda.FloatTensor([0])
-        self._loss_g_bg = torch.cuda.FloatTensor([0])
-        self._loss_g_fb_rec = torch.cuda.FloatTensor([0])
-
-        for t in range(self._T - 1):
-            self._move_inputs_to_gpu(t)
-
-            # generate fake samples
-            Inext_fake, Inext_fake_fg, Inext_fake_bg = self._generate_fake_samples_2(t)
-            self._curr_f = Inext_fake_fg 
-            self._curr_b = Inext_fake_bg
-            # Fake fgs
-            d_fake_fg = self._Df(Inext_fake_fg)
-            self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, False)
             
-            # Fake bgs
-            patches_Inext_bg = self._extract_img_patches(Inext_fake_bg)
-            d_fake_bg = self._Db(patches_Inext_bg)
-            self._loss_g_bg = self._loss_g_bg + self._compute_loss_D(d_fake_bg, False)
-            
-            # Fake images
-            self._loss_g_fb_rec = self._loss_g_fb_rec + self._criterion_Gs_rec(self._imgs[t+1], Inext_fake) * self._opt.lambda_rec
-
-        return self._loss_g_fb_rec + self._loss_g_fg + self._loss_g_bg
 
     def _generate_fake_samples(self, t):
         Inext_fake_fg, mask_next_fg = self._Gf(self._curr_f, self._curr_OFs, self._curr_warped_imgs)
         Inext_fake_bg = self._Gb(self._curr_b, self._curr_OFs)
         Inext_fake = (1 - mask_next_fg) * Inext_fake_bg + Inext_fake_fg
-        # self._mask = mask_next_fg.clone().detach().cpu()
+        self._visual_masks.append(mask_next_fg)
+        self._visual_fgs.append(Inext_fake_fg)
+        self._visual_bgs.append(Inext_fake_bg)
+        self._visual_fakes.append(Inext_fake)
         return Inext_fake, Inext_fake_fg, Inext_fake_bg
 
 
-    def _generate_fake_samples_2(self, t):
-        Inext_fake_fg, mask_next_fg = self._Gf(self._curra_f[t], self._OFs[t], self._warped_imgs[t])
-        Inext_fake_bg = self._Gb(self._curra_b[t], self._OFs[t])
-        Inext_fake = (1 - mask_next_fg) * Inext_fake_bg + Inext_fake_fg
-        self._curra_f[t+1] = Inext_fake_fg
-        self._curra_b[t+1] = Inext_fake_bg
-        self._curra_fake[t+1] = Inext_fake
-        
-        return self._curra_fake[t+1], self._curra_f[t+1], self._curra_b[t+1]
-
     def _forward_D(self):
-        # NOTE: To compute gradient penalty we need the generated fake samples and the real samples used for each t and for FG/BG
-        # That is, we will compute one gradient penalty for the fg and one for the background
+
         real_samples_fg = []
         fake_samples_fg = []
         real_samples_bg = []
@@ -352,7 +310,7 @@ class ForestGAN(BaseModel):
             real_samples_fg.append(self._first_fg)
             fake_samples_fg.append(Inext_fake_fg)
             # Df(real_fg) & Df(fake_fg)
-            d_real_fg = self._Df(self._first_fg) # NOTE: here we could use lucida dream
+            d_real_fg = self._Df(self._first_fg) # NOTE: here we could use lucida dream?
             self._loss_df_real = self._loss_df_real + self._compute_loss_D(d_real_fg, True) * self._opt.lambda_Df_prob
             d_fake_fg = self._Df(Inext_fake_fg)
             self._loss_df_fake = self._loss_df_fake + self._compute_loss_D(d_fake_fg, False) * self._opt.lambda_Df_prob
@@ -438,6 +396,21 @@ class ForestGAN(BaseModel):
         return losses
 
 
+    def _get_imgs(self):
+        visuals = {}
+        visuals['masks'] = []
+        visuals['fgs'] = []
+        visuals['bgs'] = []
+        visuals['fakes'] = []
+        r = np.random.randint(0,self._opt.batch_size, 1) # batch
+        for i in range(self._T - 1):
+            visuals['masks'] = cv2.cvtColor(tensor2im(self._visual_masks[i][r,:,:,:].expand_as(self._curr_f[r,:,:,:].cpu().detach())), cv2.COLOR_RGB2BGR)
+            visuals['fgs'] = cv2.cvtColor(tensor2im(self._visual_fgs[i][r,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR)
+            visuals['bgs'] = cv2.cvtColor(tensor2im(self._visual_bgs[i][r,:,:,:].cpu().detach()), cv2.COLOR_BGR2RGB)
+            visuals['fakes'] = cv2.cvtColor(tensor2im(self._visual_fakes[i][r,:,:,:].cpu().detach()), cv2.COLOR_BGR2RGB)
+
+        return visuals
+    
     def _print_losses(self):
         print("MSE =" + "{:.2f}".format(self._loss_g_fb_rec.item()))
         discr_f = self._loss_df_fake.item() + self._loss_df_real.item()
@@ -476,8 +449,8 @@ class ForestGAN(BaseModel):
     def _save_img(self, ffg, fbg):
         for i in range(self._T-1):
 
-            cv2.imwrite('fg'+str(i)+'.jpeg',cv2.cvtColor(tensor2im(ffg[i][0,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR))
-            cv2.imwrite('bg'+str(i)+'.jpeg',cv2.cvtColor(tensor2im(fbg[i][0,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR))
+            cv2.imwrite('fg1'+str(i)+'.jpeg',cv2.cvtColor(tensor2im(ffg[i][0,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR))
+            cv2.imwrite('bg1'+str(i)+'.jpeg',cv2.cvtColor(tensor2im(fbg[i][0,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR))
             # cv2.imwrite('mask.jpeg',cv2.cvtColor(tensor2im(self._mask[0,:,:,:].expand_as(self._curr_f[0,:,:,:].cpu().detach())), cv2.COLOR_RGB2BGR))
-        print("SAVINGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG")
-
+        cv2.imwrite('fg_1_.jpeg',cv2.cvtColor(tensor2im(self._curr_f[0,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR))
+        cv2.imwrite('bg_1_.jpeg',cv2.cvtColor(tensor2im(self._curr_b[0,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR))
