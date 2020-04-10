@@ -8,10 +8,11 @@ from networks.networks import NetworksFactory
 import os
 import numpy as np
 import torch.nn.functional as F
-
+from data.dataset_davis import tensor2im
+import cv2
 class ForestGAN(BaseModel):
     def __init__(self, opt):
-        
+        self.ponc = 0
         super(ForestGAN, self).__init__(opt)
         self._name = 'forestgan'
         self._opt = opt
@@ -39,7 +40,7 @@ class ForestGAN(BaseModel):
         self._first_bg = sample['mask_b']
         self._real_bg_patches = self._extract_real_patches(self._opt, self._first_fg, self._first_bg) # NOTE TODO This could be done for each t
         self._move_inputs_to_gpu(0)
-
+        
     def _move_inputs_to_gpu(self, t):
         
         if(t==0):
@@ -77,7 +78,7 @@ class ForestGAN(BaseModel):
         convsize = output.size()[-1]
         indexes = torch.le(output, 0.001)
         
-        N = 10
+        N = self._opt.num_patches
         nonzero_indexes = []
         nonzero_elements = [0] * batch_size
         for i in range(batch_size):
@@ -232,15 +233,17 @@ class ForestGAN(BaseModel):
             self._optimizer_Df.step()
             self._optimizer_Db.step()
 
+            
             # train G
             self._Gf.reset_params()
             self._Gb.reset_params()
-           
-            if train_generator:
-                
+            self.ponc = self.ponc + 1
+            
+            # if train_generator:
+            if(self.ponc%10 == 0):
+                self._save_img(fake_samples_fg, fake_samples_bg)
                 print("Train generator!")
                 loss_G = self._forward_G()
-                print(loss_G)
                 self._optimizer_Gf.zero_grad()
                 self._optimizer_Gb.zero_grad()
                 loss_G.backward()
@@ -249,9 +252,10 @@ class ForestGAN(BaseModel):
                 self._print_losses()
                 self._Gf.reset_params()
                 self._Gb.reset_params()
+                
 
     def _forward_G(self):
-        
+
         self._loss_g_fg = torch.cuda.FloatTensor([0])
         self._loss_g_bg = torch.cuda.FloatTensor([0])
         self._loss_g_fb_rec = torch.cuda.FloatTensor([0])
@@ -263,9 +267,10 @@ class ForestGAN(BaseModel):
             Inext_fake, Inext_fake_fg, Inext_fake_bg = self._generate_fake_samples(t)
             self._curr_f = Inext_fake_fg 
             self._curr_b = Inext_fake_bg
+            
             # Fake fgs
             d_fake_fg = self._Df(Inext_fake_fg)
-            self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, False)
+            self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, False) 
             
             # Fake bgs
             patches_Inext_bg = self._extract_img_patches(Inext_fake_bg)
@@ -273,7 +278,7 @@ class ForestGAN(BaseModel):
             self._loss_g_bg = self._loss_g_bg + self._compute_loss_D(d_fake_bg, False)
             
             # Fake images
-            self._loss_g_fb_rec = self._loss_g_fb_rec + self._criterion_Gs_rec(self._next_frame_imgs_ori, Inext_fake)
+            self._loss_g_fb_rec = self._loss_g_fb_rec + self._criterion_Gs_rec(self._next_frame_imgs_ori, Inext_fake) * self._opt.lambda_rec
 
         return self._loss_g_fb_rec + self._loss_g_fg + self._loss_g_bg
         
@@ -301,7 +306,7 @@ class ForestGAN(BaseModel):
             self._loss_g_bg = self._loss_g_bg + self._compute_loss_D(d_fake_bg, False)
             
             # Fake images
-            self._loss_g_fb_rec = self._loss_g_fb_rec + self._criterion_Gs_rec(self._imgs[t+1], Inext_fake)
+            self._loss_g_fb_rec = self._loss_g_fb_rec + self._criterion_Gs_rec(self._imgs[t+1], Inext_fake) * self._opt.lambda_rec
 
         return self._loss_g_fb_rec + self._loss_g_fg + self._loss_g_bg
 
@@ -309,6 +314,7 @@ class ForestGAN(BaseModel):
         Inext_fake_fg, mask_next_fg = self._Gf(self._curr_f, self._curr_OFs, self._curr_warped_imgs)
         Inext_fake_bg = self._Gb(self._curr_b, self._curr_OFs)
         Inext_fake = (1 - mask_next_fg) * Inext_fake_bg + Inext_fake_fg
+        # self._mask = mask_next_fg.clone().detach().cpu()
         return Inext_fake, Inext_fake_fg, Inext_fake_bg
 
 
@@ -319,6 +325,7 @@ class ForestGAN(BaseModel):
         self._curra_f[t+1] = Inext_fake_fg
         self._curra_b[t+1] = Inext_fake_bg
         self._curra_fake[t+1] = Inext_fake
+        
         return self._curra_fake[t+1], self._curra_f[t+1], self._curra_b[t+1]
 
     def _forward_D(self):
@@ -336,7 +343,7 @@ class ForestGAN(BaseModel):
         self._loss_db_fake = torch.cuda.FloatTensor([0])
 
         for t in range(self._T-1):    # 0, 1, 2, 3,..., T-2,
-            print("-------------- t = ", t)
+            # print("-------------- t = ", t)
             self._move_inputs_to_gpu(t)
             # generate fake samples
             Inext_fake, Inext_fake_fg, Inext_fake_bg = self._generate_fake_samples(t)
@@ -346,20 +353,20 @@ class ForestGAN(BaseModel):
             fake_samples_fg.append(Inext_fake_fg)
             # Df(real_fg) & Df(fake_fg)
             d_real_fg = self._Df(self._first_fg) # NOTE: here we could use lucida dream
-            self._loss_df_real = self._loss_df_real + self._compute_loss_D(d_real_fg, True)
+            self._loss_df_real = self._loss_df_real + self._compute_loss_D(d_real_fg, True) * self._opt.lambda_Df_prob
             d_fake_fg = self._Df(Inext_fake_fg)
-            self._loss_df_fake = self._loss_df_fake + self._compute_loss_D(d_fake_fg, False)
+            self._loss_df_fake = self._loss_df_fake + self._compute_loss_D(d_fake_fg, False) * self._opt.lambda_Df_prob
 
             # Db(real_bg_patches) & Db(fake_bg_patches)
             paches_bg_real = self._real_bg_patches.view(-1,3,self._opt.kh, self._opt.kw) 
             real_samples_bg.append(paches_bg_real)
             d_real_bg = self._Db(paches_bg_real)
-            self._loss_db_real = self._loss_db_real + self._compute_loss_D(d_real_bg, True)
+            self._loss_db_real = self._loss_db_real + self._compute_loss_D(d_real_bg, True) * self._opt.lambda_Db_prob
             
             patches_bg_fake = self._extract_img_patches(Inext_fake_bg)
             fake_samples_bg.append(patches_bg_fake)
             d_fake_bg = self._Db(patches_bg_fake)
-            self._loss_db_fake = self._loss_db_fake + self._compute_loss_D(d_fake_bg, False)
+            self._loss_db_fake = self._loss_db_fake + self._compute_loss_D(d_fake_bg, False) * self._opt.lambda_Db_prob
 
         return self._loss_df_fake + self._loss_df_real + self._loss_db_fake + self._loss_db_real, real_samples_fg, fake_samples_fg, real_samples_bg, fake_samples_bg
 
@@ -412,22 +419,65 @@ class ForestGAN(BaseModel):
         return -torch.mean(estim) if is_real else torch.mean(estim)
 
 
-    def _print_losses(self):
-        print("MSE :" + "{:.2f}".format(self._loss_g_fb_rec.item()))
+    def _get_losses(self):
+        losses = {}
         
+        losses['loss_df_real'] = self._loss_df_real.item()
+        losses['loss_df_fake'] = self._loss_df_fake.item()
+        losses['loss_df_gp'] =  self._loss_df_gp.item()
+        losses['loss_db_real'] = self._loss_db_real.item()
+        losses['loss_db_fake'] = self._loss_db_fake.item()
+        losses['loss_db_gp'] = self._loss_db_gp.item()
+        losses['loss_g_fg'] = self._loss_g_fg.item()
+        losses['loss_g_bg'] = self._loss_g_bg.item()
+        losses['loss_g_fb_rec'] = self._loss_g_fb_rec.item()
+        loss_df = self._loss_df_fake.item() + self._loss_df_real.item() + self._loss_df_gp.item()
+        losses['loss_df'] = loss_df
+        loss_db = self._loss_db_fake.item() + self._loss_db_real.item() + self._loss_db_gp.item()
+        losses['loss_db'] = loss_db
+        return losses
+
+
+    def _print_losses(self):
+        print("MSE =" + "{:.2f}".format(self._loss_g_fb_rec.item()))
+        discr_f = self._loss_df_fake.item() + self._loss_df_real.item()
+        print("Df(fake) - Df(real) = ", "{:.2f}".format(discr_f) )
+        discr_b = self._loss_db_fake.item() + self._loss_db_real.item()
+        print("Db(fake) - Db(real) = ", "{:.2f}".format(discr_b) )
 
     def update_learning_rate(self):
         # updated learning rate G
-        lr_decay_G = self._opt.lr_G / self._opt.nepochs_decay
-        self._current_lr_G -= lr_decay_G
-        for param_group in self._optimizer_G.param_groups:
-            param_group['lr'] = self._current_lr_G
-        print('update G learning rate: %f -> %f' %  (self._current_lr_G + lr_decay_G, self._current_lr_G))
+        lr_decay_Gf = self._opt.lr_Gf / self._opt.nepochs_decay
+        self._current_lr_Gf -= lr_decay_G
+        for param_group in self._optimizer_Gf.param_groups:
+            param_group['lr'] = self._current_lr_Gf
+        print('update G learning rate: %f -> %f' %  (self._current_lr_Gf + lr_decay_Gf, self._current_lr_Gf))
+
+        lr_decay_Gf = self._opt.lr_Gf / self._opt.nepochs_decay
+        self._current_lr_Gf -= lr_decay_G
+        for param_group in self._optimizer_Gf.param_groups:
+            param_group['lr'] = self._current_lr_Gf
+        print('update G learning rate: %f -> %f' %  (self._current_lr_Gf + lr_decay_Gf, self._current_lr_Gf))
 
         # update learning rate D
-        lr_decay_D = self._opt.lr_D / self._opt.nepochs_decay
-        self._current_lr_D -= lr_decay_D
-        for param_group in self._optimizer_D.param_groups:
-            param_group['lr'] = self._current_lr_D
-        print('update D learning rate: %f -> %f' %  (self._current_lr_D + lr_decay_D, self._current_lr_D))
+        lr_decay_Df = self._opt.lr_Df / self._opt.nepochs_decay
+        self._current_lr_Df -= lr_decay_Df
+        for param_group in self._optimizer_Df.param_groups:
+            param_group['lr'] = self._current_lr_Df
+        print('update D learning rate: %f -> %f' %  (self._current_lr_Df + lr_decay_Df, self._current_lr_Df))
+
+        lr_decay_Db = self._opt.lr_Db / self._opt.nepochs_decay
+        self._current_lr_Db -= lr_decay_Db
+        for param_group in self._optimizer_Db.param_groups:
+            param_group['lr'] = self._current_lr_Db
+        print('update D learning rate: %f -> %f' %  (self._current_lr_Db + lr_decay_Db, self._current_lr_Db))
+
+    
+    def _save_img(self, ffg, fbg):
+        for i in range(self._T-1):
+
+            cv2.imwrite('fg'+str(i)+'.jpeg',cv2.cvtColor(tensor2im(ffg[i][0,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR))
+            cv2.imwrite('bg'+str(i)+'.jpeg',cv2.cvtColor(tensor2im(fbg[i][0,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR))
+            # cv2.imwrite('mask.jpeg',cv2.cvtColor(tensor2im(self._mask[0,:,:,:].expand_as(self._curr_f[0,:,:,:].cpu().detach())), cv2.COLOR_RGB2BGR))
+        print("SAVINGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG")
 

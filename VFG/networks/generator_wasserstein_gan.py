@@ -86,8 +86,8 @@ class GeneratorF(NetworkBase):
         features = self.main(x)
         features_ = torch.cat([self.last_features[self.t], features], dim=1) # Concat in channel dimension
 
-        print("Last feature = ", self.last_features[self.t].size())
-        print("features_    = ", features_.size())
+        # print("Last feature = ", self.last_features[self.t].size())
+        # print("features_    = ", features_.size())
         color_mask = self.img_reg_packs[self.t](features_)
         att_mask = self.attention_reg_packs[self.t](features_)
         if(self.t<self.T-2):

@@ -38,7 +38,7 @@ class Train:
             self._train_epoch(i_epoch)
 
             # save model
-            print('saving the model at the end of epoch %d, iters %d' % (i_epoch, self._total_steps))
+            # print('saving the model at the end of epoch %d, iters %d' % (i_epoch, self._total_steps))
             # self._model.save(i_epoch)
 
             # print epoch info
@@ -59,8 +59,7 @@ class Train:
             iter_start_time = time.time()
             
             # display flags
-            # do_visuals = self._last_display_time is None or time.time() - self._last_display_time > self._opt.display_freq_s
-            do_visuals = False
+            do_visuals = self._last_display_time is None or time.time() - self._last_display_time > self._opt.display_freq_s
             # do_print_terminal = time.time() - self._last_print_time > self._opt.print_freq_s or do_visuals
 
             # train model
@@ -77,10 +76,10 @@ class Train:
             #     self._display_terminal(iter_start_time, i_epoch, i_train_batch, do_visuals)
             #     self._last_print_time = time.time()
 
-            # # display visualizer
+            # # # display visualizer
             # if do_visuals:
             #     self._display_visualizer_train(self._total_steps)
-            #     self._display_visualizer_val(i_epoch, self._total_steps)
+            #     # self._display_visualizer_val(i_epoch, self._total_steps)
             #     self._last_display_time = time.time()
 
             # # save model

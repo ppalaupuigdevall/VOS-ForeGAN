@@ -9,19 +9,14 @@ class TBVisualizer:
     def __init__(self, opt):
         self._opt = opt
         self._save_path = os.path.join(opt.checkpoints_dir, opt.name)
-
-        self._log_path = os.path.join(self._save_path, 'loss_log2.txt')
-        self._tb_path = os.path.join(self._save_path, 'summary.json')
         self._writer = SummaryWriter(self._save_path)
 
-        with open(self._log_path, "a") as log_file:
-            now = time.strftime("%c")
-            log_file.write('================ Training Loss (%s) ================\n' % now)
+        
 
     def __del__(self):
         self._writer.close()
 
-    def display_current_results(self, visuals, it, is_train, save_visuals=False):
+    def display_current_results(self, visuals):
         for label, image_numpy in visuals.items():
             sum_name = '{}/{}'.format('Train' if is_train else 'Test', label)
             self._writer.add_image(sum_name, image_numpy, it)
@@ -33,7 +28,7 @@ class TBVisualizer:
 
         self._writer.export_scalars_to_json(self._tb_path)
 
-    def plot_scalars(self, scalars, it, is_train):
+    def plot_scalars(self, scalars, it):
         for label, scalar in scalars.items():
             sum_name = '{}/{}'.format('Train' if is_train else 'Test', label)
             self._writer.add_scalar(sum_name, scalar, it)
