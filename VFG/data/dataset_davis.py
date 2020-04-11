@@ -117,7 +117,7 @@ class DavisDataset(data.Dataset):
                 masked_img_bg = self.transform_img(masked_img_bg)
 
 
-            elif(i<self.T-1):
+            elif(i<=self.T-1):
                 flow = readFlow(OFs_paths[i])
             
                 warped_img = warp_flow(masked_img_ori, flow)

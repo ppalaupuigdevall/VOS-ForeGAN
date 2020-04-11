@@ -8,7 +8,8 @@ from networks.networks import NetworksFactory
 import os
 import numpy as np
 import torch.nn.functional as F
-
+from data.dataset_davis import tensor2im
+import cv2
 class ForestGAN(BaseModel):
     def __init__(self, opt):
         
@@ -31,14 +32,38 @@ class ForestGAN(BaseModel):
 
 
     def set_input(self, sample):
-        self._imgs = sample['imgs'] # [0, 1, ..., t-1] REAL IMAGES
-        self._OFs = sample['OFs'] # [0, 1, ..., t-1]
-        self._warped_imgs = sample['warped_imgs'] # [0, 1, ..., t-1]
-        self._curr_f = sample['mask_f']
+        self._imgs = sample['imgs'] # [i_0, i_1, ..., i_t-1] REAL IMAGES
+        self._OFs = sample['OFs'] # [of_0, of_1, ..., of_t-2]
+        self._warped_imgs = sample['warped_imgs'] # [w_0, w_1, ..., w_t-1]
         self._first_fg = sample['mask_f'] 
         self._curr_b = sample['mask_b']
         self._first_bg = sample['mask_b']
-        self._real_bg_patches = self._extract_real_patches(self._opt, self._first_fg, self._first_bg)
+        self._real_bg_patches = self._extract_real_patches(self._opt, self._first_fg, self._first_bg) # NOTE TODO This could be done for each t
+        self._move_inputs_to_gpu(0)
+        
+    def _move_inputs_to_gpu(self, t):
+        
+        if(t==0):
+            self._visual_masks = []
+            self._visual_fgs = []
+            self._visual_bgs = []
+            self._visual_fakes = []
+            # Move everytrhing to GPU
+            self._next_frame_imgs_ori = self._imgs[t+1].cuda()
+            self._curr_OFs = self._OFs[t].cuda()
+            self._curr_warped_imgs = self._warped_imgs[t].cuda()
+            self._curr_f = self._first_fg.cuda()
+            self._curr_b = self._first_bg.cuda()
+            self._first_fg = self._first_fg.cuda()
+            self._first_bg = self._first_bg.cuda()
+            self._real_bg_patches = self._real_bg_patches.cuda()
+            
+
+        else:
+            self._curr_OFs = self._OFs[t].cuda()
+            self._curr_warped_imgs = self._warped_imgs[t].cuda()
+            self._next_frame_imgs_ori = self._imgs[t+1].cuda()        
+
 
     def _extract_real_patches(self, opt, first_fg, first_bg):
         batch_size = opt.batch_size
@@ -48,7 +73,7 @@ class ForestGAN(BaseModel):
         convsize = output.size()[-1]
         indexes = torch.le(output, 0.001)
         
-        N = 10
+        N = self._opt.num_patches
         nonzero_indexes = []
         nonzero_elements = [0] * batch_size
         for i in range(batch_size):
@@ -80,7 +105,11 @@ class ForestGAN(BaseModel):
 
         
     def _extract_img_patches(self,x, ch=3, height=224, width=416, kh=60, kw=112,dh=20, dw=36):
-        patches = x.unfold(2, kh, dh).unfold(3, kw, dw)
+        patches = x.unfold(2, kh, dh).unfold(3, kw, dw) # 2,3,9,9,60,112
+        r = np.random.randint(0,patches.size()[2]*patches.size()[3], self._opt.num_patches)
+        r = np.unravel_index(r,(patches.size()[2], patches.size()[3]))
+        r = torch.from_numpy(np.asarray(r))
+        patches = patches[:,:,r[0,:], r[1,:], :,:]
         patches = patches.view(-1, ch, kh, kw)
         return patches
 
@@ -116,10 +145,10 @@ class ForestGAN(BaseModel):
         self._Db.cuda()
 
     def _create_generator_f(self):
-        return NetworksFactory.get_by_name('generator_wasserstein_gan_f', c_dim=self._opt.extra_ch_gf)
+        return NetworksFactory.get_by_name('generator_wasserstein_gan_f', c_dim=self._opt.extra_ch_gf, T=self._opt.T)
 
     def _create_generator_b(self):
-        return NetworksFactory.get_by_name('generator_wasserstein_gan_b', c_dim=self._opt.extra_ch_gb)
+        return NetworksFactory.get_by_name('generator_wasserstein_gan_b', c_dim=self._opt.extra_ch_gb, T=self._opt.T)
 
     def _create_discriminator_f(self):
         return NetworksFactory.get_by_name('discriminator_wasserstein_gan')
@@ -146,7 +175,8 @@ class ForestGAN(BaseModel):
 
     def _init_losses(self):
         # define loss functions
-        self._criterion_Gs_rec = torch.nn.MSELoss().cuda()
+        # self._criterion_Gs_rec = torch.nn.MSELoss().cuda()
+        self._criterion_Gs_rec = torch.nn.L1Loss().cuda()
 
         # init losses G
         self._loss_g_fg = torch.cuda.FloatTensor([0])
@@ -176,87 +206,10 @@ class ForestGAN(BaseModel):
         self._Db.eval()
         self._is_train = False
 
-
-    def forward(self, sample, keep_data_for_visuals=False, return_estimates=False):
-        if not self._is_train:
-            # convert tensor to variables
-            real_img = Variable(self._input_real_img, volatile=True)
-            real_cond = Variable(self._input_real_cond, volatile=True)
-            desired_cond = Variable(self._input_desired_cond, volatile=True)
-
-            # generate fake images
-            fake_imgs, fake_img_mask = self._G.forward(real_img, desired_cond)
-            fake_img_mask = self._do_if_necessary_saturate_mask(fake_img_mask, saturate=self._opt.do_saturate_mask)
-            fake_imgs_masked = fake_img_mask * real_img + (1 - fake_img_mask) * fake_imgs
-
-            rec_real_img_rgb, rec_real_img_mask = self._G.forward(fake_imgs_masked, real_cond)
-            rec_real_img_mask = self._do_if_necessary_saturate_mask(rec_real_img_mask, saturate=self._opt.do_saturate_mask)
-            rec_real_imgs = rec_real_img_mask * fake_imgs_masked + (1 - rec_real_img_mask) * rec_real_img_rgb
-
-            imgs = None
-            data = None
-            if return_estimates:
-                # normalize mask for better visualization
-                fake_img_mask_max = fake_imgs_masked.view(fake_img_mask.size(0), -1).max(-1)[0]
-                fake_img_mask_max = torch.unsqueeze(torch.unsqueeze(torch.unsqueeze(fake_img_mask_max, -1), -1), -1)
-                # fake_img_mask_norm = fake_img_mask / fake_img_mask_max
-                fake_img_mask_norm = fake_img_mask
-
-                # generate images
-                im_real_img = util.tensor2im(real_img.data)
-                im_fake_imgs = util.tensor2im(fake_imgs.data)
-                im_fake_img_mask_norm = util.tensor2maskim(fake_img_mask_norm.data)
-                im_fake_imgs_masked = util.tensor2im(fake_imgs_masked.data)
-                im_rec_imgs = util.tensor2im(rec_real_img_rgb.data)
-                im_rec_img_mask_norm = util.tensor2maskim(rec_real_img_mask.data)
-                im_rec_imgs_masked = util.tensor2im(rec_real_imgs.data)
-                im_concat_img = np.concatenate([im_real_img, im_fake_imgs_masked, im_fake_img_mask_norm, im_fake_imgs,
-                                                im_rec_imgs, im_rec_img_mask_norm, im_rec_imgs_masked],
-                                               1)
-
-                im_real_img_batch = util.tensor2im(real_img.data, idx=-1, nrows=1)
-                im_fake_imgs_batch = util.tensor2im(fake_imgs.data, idx=-1, nrows=1)
-                im_fake_img_mask_norm_batch = util.tensor2maskim(fake_img_mask_norm.data, idx=-1, nrows=1)
-                im_fake_imgs_masked_batch = util.tensor2im(fake_imgs_masked.data, idx=-1, nrows=1)
-                im_concat_img_batch = np.concatenate([im_real_img_batch, im_fake_imgs_masked_batch,
-                                                      im_fake_img_mask_norm_batch, im_fake_imgs_batch],
-                                                     1)
-
-                imgs = OrderedDict([('real_img', im_real_img),
-                                    ('fake_imgs', im_fake_imgs),
-                                    ('fake_img_mask', im_fake_img_mask_norm),
-                                    ('fake_imgs_masked', im_fake_imgs_masked),
-                                    ('concat', im_concat_img),
-                                    ('real_img_batch', im_real_img_batch),
-                                    ('fake_imgs_batch', im_fake_imgs_batch),
-                                    ('fake_img_mask_batch', im_fake_img_mask_norm_batch),
-                                    ('fake_imgs_masked_batch', im_fake_imgs_masked_batch),
-                                    ('concat_batch', im_concat_img_batch),
-                                    ])
-
-                data = OrderedDict([('real_path', self._input_real_img_path),
-                                    ('desired_cond', desired_cond.data[0, ...].cpu().numpy().astype('str'))
-                                    ])
-
-            # keep data for visualization
-            if keep_data_for_visuals:
-                self._vis_real_img = util.tensor2im(self._input_real_img)
-                self._vis_fake_img_unmasked = util.tensor2im(fake_imgs.data)
-                self._vis_fake_img = util.tensor2im(fake_imgs_masked.data)
-                self._vis_fake_img_mask = util.tensor2maskim(fake_img_mask.data)
-                self._vis_real_cond = self._input_real_cond.cpu()[0, ...].numpy()
-                self._vis_desired_cond = self._input_desired_cond.cpu()[0, ...].numpy()
-                self._vis_batch_real_img = util.tensor2im(self._input_real_img, idx=-1)
-                self._vis_batch_fake_img_mask = util.tensor2maskim(fake_img_mask.data, idx=-1)
-                self._vis_batch_fake_img = util.tensor2im(fake_imgs_masked.data, idx=-1)
-
-            return imgs, data
-
-    def optimize_parameters(self, train_generator=True):
+    def optimize_parameters(self, train_generator=True, save_imgs = False):
         if self._is_train:
-            print("Va a fer el forward D")
+
             loss_D, real_samples_fg, fake_samples_fg, real_samples_bg, fake_samples_bg = self._forward_D()
-            print("El fa be")
             self._optimizer_Df.zero_grad()
             self._optimizer_Db.zero_grad()
             loss_D.backward()
@@ -266,67 +219,76 @@ class ForestGAN(BaseModel):
             self._loss_df_gp = torch.cuda.FloatTensor([0])
             self._loss_db_gp = torch.cuda.FloatTensor([0])
 
-            for t in range(self._T):
+            for t in range(self._T -1):
                 self._loss_df_gp = self._loss_df_gp + self._gradient_penalty_Df(real_samples_fg[t], fake_samples_fg[t]) 
-                self._loss_db_gp = self._loss_db_gp + self._gradinet_penalty_Db(real_samples_bg[t], fake_samples_bg[t])               
+                self._loss_db_gp = self._loss_db_gp + self._gradient_penalty_Db(real_samples_bg[t], fake_samples_bg[t])               
 
             loss_D_gp = self._loss_df_gp + self._loss_db_gp
             loss_D_gp.backward()
             self._optimizer_Df.step()
             self._optimizer_Db.step()
 
-             # train G
-            if train_generator:
-                loss_G = self._forward_G(keep_data_for_visuals)
+            
+            # train G
+            self._Gf.reset_params()
+            self._Gb.reset_params()
+            
+            # if train_generator:
+            if(train_generator):
+                
+                loss_G = self._forward_G()
                 self._optimizer_Gf.zero_grad()
                 self._optimizer_Gb.zero_grad()
                 loss_G.backward()
                 self._optimizer_Gf.step()
-                self._optimizer_Gf.step()
+                self._optimizer_Gb.step()
+                self._Gf.reset_params()
+                self._Gb.reset_params()
+            
 
 
-    def _forward_G(self, keep_data_for_visuals):
-        
+    def _forward_G(self):
+
         self._loss_g_fg = torch.cuda.FloatTensor([0])
         self._loss_g_bg = torch.cuda.FloatTensor([0])
         self._loss_g_fb_rec = torch.cuda.FloatTensor([0])
 
-        for t in range(self._T):
-            
+        for t in range(self._T - 1):
+            self._move_inputs_to_gpu(t)
+
             # generate fake samples
             Inext_fake, Inext_fake_fg, Inext_fake_bg = self._generate_fake_samples(t)
             self._curr_f = Inext_fake_fg 
             self._curr_b = Inext_fake_bg
+            
             # Fake fgs
             d_fake_fg = self._Df(Inext_fake_fg)
-            self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg)
+            self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, False) 
             
             # Fake bgs
             patches_Inext_bg = self._extract_img_patches(Inext_fake_bg)
             d_fake_bg = self._Db(patches_Inext_bg)
-            self._loss_g_bg = self._loss_g_bg + self._compute_loss_D(d_fake_bg)
+            self._loss_g_bg = self._loss_g_bg + self._compute_loss_D(d_fake_bg, False)
             
             # Fake images
-            self._loss_g_fb_rec = self._loss_g_fb_rec + self._criterion_Gs_rec(self._imgs[t], Inext_fake)
+            self._loss_g_fb_rec = self._loss_g_fb_rec + self._criterion_Gs_rec(self._next_frame_imgs_ori, Inext_fake) * self._opt.lambda_rec
 
         return self._loss_g_fb_rec + self._loss_g_fg + self._loss_g_bg
-
+            
 
     def _generate_fake_samples(self, t):
-        curr_f = self._curr_f.cuda()
-        ofs = self._OFs[t].cuda()
-        warpeds = self._warped_imgs[t].cuda()
-        curr_b = self._curr_b.cuda()
-
-        Inext_fake_fg, mask_next_fg = self._Gf(curr_f, ofs, warpeds)
-        Inext_fake_bg = self._Gb(curr_b, ofs)
+        Inext_fake_fg, mask_next_fg = self._Gf(self._curr_f, self._curr_OFs, self._curr_warped_imgs)
+        Inext_fake_bg = self._Gb(self._curr_b, self._curr_OFs)
         Inext_fake = (1 - mask_next_fg) * Inext_fake_bg + Inext_fake_fg
+        self._visual_masks.append(mask_next_fg)
+        self._visual_fgs.append(Inext_fake_fg)
+        self._visual_bgs.append(Inext_fake_bg)
+        self._visual_fakes.append(Inext_fake)
         return Inext_fake, Inext_fake_fg, Inext_fake_bg
 
 
     def _forward_D(self):
-        # NOTE: To compute gradient penalty we need the generated fake samples and the real samples used for each t and for FG/BG
-        # That is, we will compute one gradient penalty for the fg and one for the background
+
         real_samples_fg = []
         fake_samples_fg = []
         real_samples_bg = []
@@ -338,27 +300,31 @@ class ForestGAN(BaseModel):
         self._loss_db_real = torch.cuda.FloatTensor([0])
         self._loss_db_fake = torch.cuda.FloatTensor([0])
 
-        for t in range(self._T):    
+        for t in range(self._T-1):    # 0, 1, 2, 3,..., T-2,
+            # print("-------------- t = ", t)
+            self._move_inputs_to_gpu(t)
             # generate fake samples
             Inext_fake, Inext_fake_fg, Inext_fake_bg = self._generate_fake_samples(t)
+            self._curr_f = Inext_fake_fg
+            self._curr_b = Inext_fake_bg
             real_samples_fg.append(self._first_fg)
             fake_samples_fg.append(Inext_fake_fg)
             # Df(real_fg) & Df(fake_fg)
-            d_real_fg = self._Df(self.first_fg) # NOTE: here we could use lucida dream
-            self._loss_df_real = self._loss_df_real + self._compute_loss_D(d_real_fg, True)
+            d_real_fg = self._Df(self._first_fg) # NOTE: here we could use lucida dream?
+            self._loss_df_real = self._loss_df_real + self._compute_loss_D(d_real_fg, True) * self._opt.lambda_Df_prob
             d_fake_fg = self._Df(Inext_fake_fg)
-            self._loss_df_fake = self._loss_df_fake + self._compute_loss_D(d_fake_fg, False)
+            self._loss_df_fake = self._loss_df_fake + self._compute_loss_D(d_fake_fg, False) * self._opt.lambda_Df_prob
 
             # Db(real_bg_patches) & Db(fake_bg_patches)
-            paches_bg_real = self.real_bg_patches 
+            paches_bg_real = self._real_bg_patches.view(-1,3,self._opt.kh, self._opt.kw) 
             real_samples_bg.append(paches_bg_real)
             d_real_bg = self._Db(paches_bg_real)
-            self._loss_db_real = self._loss_db_real + self._compute_loss_D(d_real_bg, True)
+            self._loss_db_real = self._loss_db_real + self._compute_loss_D(d_real_bg, True) * self._opt.lambda_Db_prob
             
-            patches_bg_fake = self._extract_img_patches(Inext_fake_bg)            
+            patches_bg_fake = self._extract_img_patches(Inext_fake_bg)
             fake_samples_bg.append(patches_bg_fake)
             d_fake_bg = self._Db(patches_bg_fake)
-            self._loss_db_fake = self._loss_db_fake + self._compute_loss_D(d_fake_bg, False)
+            self._loss_db_fake = self._loss_db_fake + self._compute_loss_D(d_fake_bg, False) * self._opt.lambda_Db_prob
 
         return self._loss_df_fake + self._loss_df_real + self._loss_db_fake + self._loss_db_real, real_samples_fg, fake_samples_fg, real_samples_bg, fake_samples_bg
 
@@ -367,9 +333,9 @@ class ForestGAN(BaseModel):
         # interpolate sample
         # real_samples are always the first foregrounds (B, 3, H, W)
         # Fake samples are the foregrounds generated in each timestep
-        alpha = torch.rand(self._B, 1, 1, 1).cuda().expand_as(real_samples)
+        alpha = torch.rand(self._opt.batch_size, 1, 1, 1).cuda().expand_as(real_samples)
         interpolated = Variable(alpha * real_samples.data + (1 - alpha) * fake_samples.data, requires_grad=True)
-        interpolated_prob, _ = self._Df(interpolated)
+        interpolated_prob = self._Df(interpolated)
 
         # compute gradients
         grad = torch.autograd.grad(outputs=interpolated_prob,
@@ -388,9 +354,9 @@ class ForestGAN(BaseModel):
 
     def _gradient_penalty_Db(self, real_samples, fake_samples):
         # interpolate sample
-        alpha = torch.rand(self._B, 1, 1, 1).cuda().expand_as(self.real_patches)
+        alpha = torch.rand(self._opt.num_patches * self._opt.batch_size, 1, 1, 1).cuda().expand_as(real_samples)
         interpolated = Variable(alpha * real_samples.data + (1 - alpha) * fake_samples.data, requires_grad=True)
-        interpolated_prob, _ = self._Df(interpolated)
+        interpolated_prob = self._Db(interpolated)
 
         # compute gradients
         grad = torch.autograd.grad(outputs=interpolated_prob,
@@ -411,87 +377,80 @@ class ForestGAN(BaseModel):
         return -torch.mean(estim) if is_real else torch.mean(estim)
 
 
-    def get_current_errors(self):
-        loss_dict = OrderedDict([('g_fake', self._loss_g_fake.data[0]),
-                                 ('g_cond', self._loss_g_cond.data[0]),
-                                 ('g_mskd_fake', self._loss_g_masked_fake.data[0]),
-                                 ('g_mskd_cond', self._loss_g_masked_cond.data[0]),
-                                 ('g_cyc', self._loss_g_cyc.data[0]),
-                                 ('g_rgb', self._loss_rec_real_img_rgb.data[0]),
-                                 ('g_rgb_un', self._loss_g_unmasked_rgb.data[0]),
-                                 ('g_rgb_s', self._loss_g_fake_imgs_smooth.data[0]),
-                                 ('g_m1', self._loss_g_mask_1.data[0]),
-                                 ('g_m2', self._loss_g_mask_2.data[0]),
-                                 ('g_m1_s', self._loss_g_mask_1_smooth.data[0]),
-                                 ('g_m2_s', self._loss_g_mask_2_smooth.data[0]),
-                                 ('g_idt', self._loss_g_idt.data[0]),
-                                 ('d_real', self._loss_d_real.data[0]),
-                                 ('d_cond', self._loss_d_cond.data[0]),
-                                 ('d_fake', self._loss_d_fake.data[0]),
-                                 ('d_gp', self._loss_d_gp.data[0])])
+    def _get_losses(self):
+        losses = {}
+        
+        losses['loss_df_real'] = self._loss_df_real.item()
+        losses['loss_df_fake'] = self._loss_df_fake.item()
+        losses['loss_df_gp'] =  self._loss_df_gp.item()
+        losses['loss_db_real'] = self._loss_db_real.item()
+        losses['loss_db_fake'] = self._loss_db_fake.item()
+        losses['loss_db_gp'] = self._loss_db_gp.item()
+        losses['loss_g_fg'] = self._loss_g_fg.item()
+        losses['loss_g_bg'] = self._loss_g_bg.item()
+        losses['loss_g_fb_rec'] = self._loss_g_fb_rec.item()
+        loss_df = self._loss_df_fake.item() + self._loss_df_real.item() + self._loss_df_gp.item()
+        losses['loss_df'] = loss_df
+        loss_db = self._loss_db_fake.item() + self._loss_db_real.item() + self._loss_db_gp.item()
+        losses['loss_db'] = loss_db
+        return losses
 
-        return loss_dict
 
-    def get_current_scalars(self):
-        return OrderedDict([('lr_G', self._current_lr_G), ('lr_D', self._current_lr_D)])
-
-    def get_current_visuals(self):
-        # visuals return dictionary
-        visuals = OrderedDict()
-
-        # input visuals
-        title_input_img = os.path.basename(self._input_real_img_path[0])
-        visuals['1_input_img'] = plot_utils.plot_au(self._vis_real_img, self._vis_real_cond, title=title_input_img)
-        visuals['2_fake_img'] = plot_utils.plot_au(self._vis_fake_img, self._vis_desired_cond)
-        visuals['3_rec_real_img'] = plot_utils.plot_au(self._vis_rec_real_img, self._vis_real_cond)
-        visuals['4_fake_img_unmasked'] = self._vis_fake_img_unmasked
-        visuals['5_fake_img_mask'] = self._vis_fake_img_mask
-        visuals['6_rec_real_img_mask'] = self._vis_rec_real_img_mask
-        visuals['7_cyc_img_unmasked'] = self._vis_fake_img_unmasked
-        # visuals['8_fake_img_mask_sat'] = self._vis_fake_img_mask_saturated
-        # visuals['9_rec_real_img_mask_sat'] = self._vis_rec_real_img_mask_saturated
-        visuals['10_batch_real_img'] = self._vis_batch_real_img
-        visuals['11_batch_fake_img'] = self._vis_batch_fake_img
-        visuals['12_batch_fake_img_mask'] = self._vis_batch_fake_img_mask
-        # visuals['11_idt_img'] = self._vis_idt_img
+    def _get_imgs(self):
+        visuals = {}
+        visuals['masks'] = []
+        visuals['fgs'] = []
+        visuals['bgs'] = []
+        visuals['fakes'] = []
+        r = np.random.randint(0,self._opt.batch_size, 1) # batch
+        for i in range(self._T - 1):
+            visuals['masks'] = cv2.cvtColor(tensor2im(self._visual_masks[i][r,:,:,:].expand_as(self._curr_f[r,:,:,:].cpu().detach())), cv2.COLOR_RGB2BGR)
+            visuals['fgs'] = cv2.cvtColor(tensor2im(self._visual_fgs[i][r,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR)
+            visuals['bgs'] = cv2.cvtColor(tensor2im(self._visual_bgs[i][r,:,:,:].cpu().detach()), cv2.COLOR_BGR2RGB)
+            visuals['fakes'] = cv2.cvtColor(tensor2im(self._visual_fakes[i][r,:,:,:].cpu().detach()), cv2.COLOR_BGR2RGB)
 
         return visuals
-
-    def save(self, label):
-        # save networks
-        self._save_network(self._G, 'G', label)
-        self._save_network(self._D, 'D', label)
-
-        # save optimizers
-        self._save_optimizer(self._optimizer_G, 'G', label)
-        self._save_optimizer(self._optimizer_D, 'D', label)
-
-    def load(self):
-        load_epoch = self._opt.load_epoch
-
-        # load G
-        self._load_network(self._G, 'G', load_epoch)
-
-        if self._is_train:
-            # load D
-            self._load_network(self._D, 'D', load_epoch)
-
-            # load optimizers
-            self._load_optimizer(self._optimizer_G, 'G', load_epoch)
-            self._load_optimizer(self._optimizer_D, 'D', load_epoch)
+    
+    def _print_losses(self):
+        print("MSE =" + "{:.2f}".format(self._loss_g_fb_rec.item()))
+        discr_f = self._loss_df_fake.item() + self._loss_df_real.item()
+        print("Df(fake) - Df(real) = ", "{:.2f}".format(discr_f) )
+        discr_b = self._loss_db_fake.item() + self._loss_db_real.item()
+        print("Db(fake) - Db(real) = ", "{:.2f}".format(discr_b) )
 
     def update_learning_rate(self):
         # updated learning rate G
-        lr_decay_G = self._opt.lr_G / self._opt.nepochs_decay
-        self._current_lr_G -= lr_decay_G
-        for param_group in self._optimizer_G.param_groups:
-            param_group['lr'] = self._current_lr_G
-        print('update G learning rate: %f -> %f' %  (self._current_lr_G + lr_decay_G, self._current_lr_G))
+        lr_decay_Gf = self._opt.lr_Gf / self._opt.nepochs_decay
+        self._current_lr_Gf -= lr_decay_G
+        for param_group in self._optimizer_Gf.param_groups:
+            param_group['lr'] = self._current_lr_Gf
+        print('update G learning rate: %f -> %f' %  (self._current_lr_Gf + lr_decay_Gf, self._current_lr_Gf))
+
+        lr_decay_Gf = self._opt.lr_Gf / self._opt.nepochs_decay
+        self._current_lr_Gf -= lr_decay_G
+        for param_group in self._optimizer_Gf.param_groups:
+            param_group['lr'] = self._current_lr_Gf
+        print('update G learning rate: %f -> %f' %  (self._current_lr_Gf + lr_decay_Gf, self._current_lr_Gf))
 
         # update learning rate D
-        lr_decay_D = self._opt.lr_D / self._opt.nepochs_decay
-        self._current_lr_D -= lr_decay_D
-        for param_group in self._optimizer_D.param_groups:
-            param_group['lr'] = self._current_lr_D
-        print('update D learning rate: %f -> %f' %  (self._current_lr_D + lr_decay_D, self._current_lr_D))
+        lr_decay_Df = self._opt.lr_Df / self._opt.nepochs_decay
+        self._current_lr_Df -= lr_decay_Df
+        for param_group in self._optimizer_Df.param_groups:
+            param_group['lr'] = self._current_lr_Df
+        print('update D learning rate: %f -> %f' %  (self._current_lr_Df + lr_decay_Df, self._current_lr_Df))
 
+        lr_decay_Db = self._opt.lr_Db / self._opt.nepochs_decay
+        self._current_lr_Db -= lr_decay_Db
+        for param_group in self._optimizer_Db.param_groups:
+            param_group['lr'] = self._current_lr_Db
+        print('update D learning rate: %f -> %f' %  (self._current_lr_Db + lr_decay_Db, self._current_lr_Db))
+
+    
+    def _save_img(self, ffg, fbg):
+        for i in range(self._T-1):
+
+            cv2.imwrite('fg1'+str(i)+'.jpeg',cv2.cvtColor(tensor2im(ffg[i][0,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR))
+            cv2.imwrite('bg1'+str(i)+'.jpeg',cv2.cvtColor(tensor2im(fbg[i][0,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR))
+            # cv2.imwrite('mask.jpeg',cv2.cvtColor(tensor2im(self._mask[0,:,:,:].expand_as(self._curr_f[0,:,:,:].cpu().detach())), cv2.COLOR_RGB2BGR))
+        cv2.imwrite('fg_1_.jpeg',cv2.cvtColor(tensor2im(self._curr_f[0,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR))
+        cv2.imwrite('bg_1_.jpeg',cv2.cvtColor(tensor2im(self._curr_b[0,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR))
