@@ -9,6 +9,7 @@ import os
 import numpy as np
 import torch.nn.functional as F
 from data.dataset_davis import tensor2im
+
 import cv2
 class ForestGAN(BaseModel):
     def __init__(self, opt):
@@ -244,6 +245,7 @@ class ForestGAN(BaseModel):
                 self._optimizer_Gb.step()
                 self._Gf.reset_params()
                 self._Gb.reset_params()
+                self._print_losses()
             
 
 
@@ -377,7 +379,7 @@ class ForestGAN(BaseModel):
         return -torch.mean(estim) if is_real else torch.mean(estim)
 
 
-    def _get_losses(self):
+    def get_losses(self):
         losses = {}
         
         losses['loss_df_real'] = self._loss_df_real.item()
@@ -396,7 +398,7 @@ class ForestGAN(BaseModel):
         return losses
 
 
-    def _get_imgs(self):
+    def get_imgs(self):
         visuals = {}
         visuals['masks'] = []
         visuals['fgs'] = []
@@ -404,10 +406,13 @@ class ForestGAN(BaseModel):
         visuals['fakes'] = []
         r = np.random.randint(0,self._opt.batch_size, 1) # batch
         for i in range(self._T - 1):
-            visuals['masks'] = cv2.cvtColor(tensor2im(self._visual_masks[i][r,:,:,:].expand_as(self._curr_f[r,:,:,:].cpu().detach())), cv2.COLOR_RGB2BGR)
-            visuals['fgs'] = cv2.cvtColor(tensor2im(self._visual_fgs[i][r,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR)
-            visuals['bgs'] = cv2.cvtColor(tensor2im(self._visual_bgs[i][r,:,:,:].cpu().detach()), cv2.COLOR_BGR2RGB)
-            visuals['fakes'] = cv2.cvtColor(tensor2im(self._visual_fakes[i][r,:,:,:].cpu().detach()), cv2.COLOR_BGR2RGB)
+            lamascara = self._visual_masks[i][r,:,:,:].expand_as(self._curr_f[r,:,:,:].cpu().detach()).cpu().detach()
+            visuals['masks'].append(util.tensor2im(lamascara))
+            visuals['fgs'].append(tensor2im(self._visual_fgs[i][r,:,:,:].cpu().detach()))
+            visuals['bgs'].append(tensor2im(self._visual_bgs[i][r,:,:,:].cpu().detach()))
+            visuals['fakes'].append(tensor2im(self._visual_fakes[i][r,:,:,:].cpu().detach()))
+
+            
 
         return visuals
     

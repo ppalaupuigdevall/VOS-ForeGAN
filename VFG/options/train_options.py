@@ -7,7 +7,7 @@ class TrainOptions(BaseOptions):
         self._parser.add_argument('--n_threads_train', default=4, type=int, help='# threads for loading data')
         self._parser.add_argument('--num_iters_validate', default=1, type=int, help='# batches to use when validating')
         self._parser.add_argument('--print_freq_s', type=int, default=10, help='frequency of showing training results on console')
-        self._parser.add_argument('--display_freq_s', type=int, default=300, help='frequency [s] of showing training results on screen')
+        self._parser.add_argument('--display_freq_s', type=int, default=360, help='frequency [s] of showing training results on screen')
         self._parser.add_argument('--save_latest_freq_s', type=int, default=3600, help='frequency of saving the latest results')
 
         self._parser.add_argument('--nepochs_no_decay', type=int, default=15000, help='# of epochs at starting learning rate')
@@ -38,16 +38,16 @@ class TrainOptions(BaseOptions):
 
         # Lambdas for losses
         self._parser.add_argument('--lambda_Df_prob', type=float, default=1, help='lambda for real/fake discriminator loss')
-        self._parser.add_argument('--lambda_Db_prob', type=float, default=1, help='lambda for real/fake discriminator loss')
+        self._parser.add_argument('--lambda_Db_prob', type=float, default=10, help='lambda for real/fake discriminator loss')
         self._parser.add_argument('--lambda_rec', type=float, default=10, help='lambda reconstruction loss')
         self._parser.add_argument('--lambda_Df_gp', type=float, default=1, help='lambda gradient penalty loss')
-        self._parser.add_argument('--lambda_Db_gp', type=float, default=1, help='lambda gradient penalty loss')
+        self._parser.add_argument('--lambda_Db_gp', type=float, default=100, help='lambda gradient penalty loss')
 
         # Foreground/Background patches extractions
-        self._parser.add_argument('--num_patches', type=int, default = 10, help='number of patches to be compared')
+        self._parser.add_argument('--num_patches', type=int, default = 12, help='number of patches to be compared')
         self._parser.add_argument('--kh', type=int, default = 60, help='number of patches to be compared')
         self._parser.add_argument('--kw', type=int, default = 112, help='number of patches to be compared')
-        self._parser.add_argument('--stride_h', type=int, default=20, help='stride patches')
-        self._parser.add_argument('--stride_w', type=int, default=36, help='stride patches')
+        self._parser.add_argument('--stride_h', type=int, default=15, help='stride patches')
+        self._parser.add_argument('--stride_w', type=int, default=20, help='stride patches')
 
         self.is_train = True

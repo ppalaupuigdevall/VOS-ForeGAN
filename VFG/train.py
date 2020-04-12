@@ -6,7 +6,7 @@ from models.models import ModelsFactory
 from collections import OrderedDict
 import os
 import torch.utils.data as data
-
+from utils.visualizer import Visualizer
 
 class Train:
     def __init__(self):
@@ -20,7 +20,7 @@ class Train:
         print('#train images = %d' % self._dataset_train_size)
 
         self._model = ModelsFactory.get_by_name(self._opt.model, self._opt)
-        # self._tb_visualizer = TBVisualizer(self._opt)
+        self._tb_visualizer = Visualizer(self._opt)
 
         self._train()
 
@@ -30,13 +30,13 @@ class Train:
         self._last_display_time = None
         self._last_save_latest_time = None
         self._last_print_time = time.time()
-
+        self._iteracio = 0
         for i_epoch in range(self._opt.load_epoch + 1, self._opt.nepochs_no_decay + self._opt.nepochs_decay + 1):
             epoch_start_time = time.time()
 
             # train epoch
             self._train_epoch(i_epoch)
-
+            
             # save model
             # print('saving the model at the end of epoch %d, iters %d' % (i_epoch, self._total_steps))
             # self._model.save(i_epoch)
@@ -66,7 +66,7 @@ class Train:
             self._model.set_input(train_batch)
             train_generator = ((i_train_batch+1) % self._opt.train_G_every_n_iterations == 0)
             self._model.optimize_parameters(train_generator=train_generator)
-            
+            self._iteracio = self._iters_per_epoch*i_epoch + i_train_batch
             # update epoch info
             self._total_steps += self._opt.batch_size
             epoch_iter += self._opt.batch_size
@@ -77,8 +77,9 @@ class Train:
             #     self._last_print_time = time.time()
 
             # # # display visualizer
-            if do_visuals:
-                self._display_visualizer_train(self._total_steps)
+            if do_visuals or i_epoch%10 == 0:
+                print("VISUAAAAALS")
+                self._display_visualizer_train(self._iteracio)
                 self._last_display_time = time.time()
 
             # # save model
@@ -92,9 +93,9 @@ class Train:
         t = (time.time() - iter_start_time) / self._opt.batch_size
         self._tb_visualizer.print_current_train_errors(i_epoch, i_train_batch, self._iters_per_epoch, errors, t, visuals_flag)
 
-    def _display_visualizer_train(self, total_steps):
-        self._tb_visualizer.display_current_results(self._model.get_current_visuals(), total_steps, is_train=True)
-        self._tb_visualizer.plot_scalars(self._model.get_current_errors(), total_steps, is_train=True)
+    def _display_visualizer_train(self, iteracio):
+        self._tb_visualizer.display_current_results(self._model.get_imgs(), iteracio)
+        self._tb_visualizer.plot_scalars(self._model.get_losses(), iteracio)
 
     def _display_visualizer_val(self, i_epoch, total_steps):
         val_start_time = time.time()
