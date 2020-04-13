@@ -12,7 +12,9 @@
  - [x] (Difficult) Implement forward D
  - [x] (Normal & urgent) Write extract_real_patches so it gives REAL patches where there's no foreground
  - [x] (Ultra difficult) Implement gradient penalty and optimize parameters
- - [ ] (Difficult) Why part of the generator is not in the GPU?
+ - [x] (Difficult) Why part of the generator is not in the GPU?
+ - [ ] Create mask from sigmoid saturated sigmoid( alpha * (x  + (1-eps) ) )
+ - [ ] Remove OF from input
 
 ### Setup
 

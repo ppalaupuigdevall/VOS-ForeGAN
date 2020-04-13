@@ -95,7 +95,9 @@ class GeneratorF(NetworkBase):
         
         self.t = self.t + 1
         
-        If_next_masked = att_mask * (If_next_warped + color_mask)  + ((1 - att_mask) * (If_next_warped + color_mask) -1 )
+        # If_next_masked = att_mask * (If_next_warped + color_mask)  + ((1 - att_mask) * (If_next_warped + color_mask) -1 )
+        If_next_masked = att_mask * If_next_warped + (1-att_mask)*color_mask
+        # foreground_mask = #sigmaoid
         return  If_next_masked, att_mask
 
 

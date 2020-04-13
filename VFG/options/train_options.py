@@ -37,17 +37,17 @@ class TrainOptions(BaseOptions):
         self._parser.add_argument('--Db_adam_b2', type=float, default=0.999, help='beta2 for D adam')
 
         # Lambdas for losses
-        self._parser.add_argument('--lambda_Df_prob', type=float, default=1, help='lambda for real/fake discriminator loss')
-        self._parser.add_argument('--lambda_Db_prob', type=float, default=10, help='lambda for real/fake discriminator loss')
+        self._parser.add_argument('--lambda_Df_prob', type=float, default=10, help='lambda for real/fake discriminator loss')
+        self._parser.add_argument('--lambda_Db_prob', type=float, default=1, help='lambda for real/fake discriminator loss')
         self._parser.add_argument('--lambda_rec', type=float, default=10, help='lambda reconstruction loss')
-        self._parser.add_argument('--lambda_Df_gp', type=float, default=1, help='lambda gradient penalty loss')
-        self._parser.add_argument('--lambda_Db_gp', type=float, default=100, help='lambda gradient penalty loss')
+        self._parser.add_argument('--lambda_Df_gp', type=float, default=5, help='lambda gradient penalty loss')
+        self._parser.add_argument('--lambda_Db_gp', type=float, default=1, help='lambda gradient penalty loss')
 
         # Foreground/Background patches extractions
-        self._parser.add_argument('--num_patches', type=int, default = 12, help='number of patches to be compared')
+        self._parser.add_argument('--num_patches', type=int, default = 40, help='number of patches/image to be compared')
         self._parser.add_argument('--kh', type=int, default = 60, help='number of patches to be compared')
         self._parser.add_argument('--kw', type=int, default = 112, help='number of patches to be compared')
-        self._parser.add_argument('--stride_h', type=int, default=15, help='stride patches')
-        self._parser.add_argument('--stride_w', type=int, default=20, help='stride patches')
+        self._parser.add_argument('--stride_h', type=int, default=10, help='stride patches')
+        self._parser.add_argument('--stride_w', type=int, default=12, help='stride patches')
 
         self.is_train = True

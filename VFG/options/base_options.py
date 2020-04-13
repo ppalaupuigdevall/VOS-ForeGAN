@@ -19,7 +19,7 @@ class BaseOptions():
 
         self._parser.add_argument('--model',            type=str,   default='forestgan',                            help='there is only this one so do not change it')
         self._parser.add_argument('--load_epoch',       type=int,   default=-1,                                     help='which epoch to load? set to -1 to use latest cached model')
-        self._parser.add_argument('--name',             type=str,   default='experiment_1',                         help='name of the experiment. It decides where to store samples and models')
+        self._parser.add_argument('--name',             type=str,   default='experiment_3',                         help='name of the experiment. It decides where to store samples and models')
         self._parser.add_argument('--checkpoints_dir',  type=str,   default='./checkpoints',                        help='models are saved here')
         self._parser.add_argument('--save_path',        type=str,   default='/data/Ponc/VOS-ForeGAN/')
         self._initialized = True
@@ -82,7 +82,7 @@ class BaseOptions():
         # set gpu ids
         if len(self._opt.gpu_ids) > 0:
             torch.cuda.set_device(self._opt.gpu_ids[0])
-            print(torch.cuda.current_device())
+            
 
     def _print(self, args):
         print('------------ Options -------------')
