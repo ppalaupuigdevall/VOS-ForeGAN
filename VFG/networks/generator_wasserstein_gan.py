@@ -54,6 +54,7 @@ class GeneratorF(NetworkBase):
             layers_reductor = []
             layers_att = []
 
+
             layers_reductor.append(nn.Conv2d(last_layer_dim, int(last_layer_dim/self.factor), kernel_size=3, stride=1, padding=1, bias=False))
             layers_reductor.append(nn.ReLU(inplace=True))
             self.reductor.append(nn.Sequential(*layers_reductor))
@@ -71,6 +72,7 @@ class GeneratorF(NetworkBase):
         self.img_reg_packs = nn.ModuleList(self.img_reg_packs)
         self.attention_reg_packs = nn.ModuleList(self.attention_reg_packs)
         self.reductor = nn.ModuleList(self.reductor)
+        self.fgmask_conv = nn.Sequential(nn.Conv2d(3,1,7,1,3,bias=False), nn.Sigmoid())
 
         self.reset_params()
 
@@ -95,10 +97,12 @@ class GeneratorF(NetworkBase):
         
         self.t = self.t + 1
         
-        # If_next_masked = att_mask * (If_next_warped + color_mask)  + ((1 - att_mask) * (If_next_warped + color_mask) -1 )
-        If_next_masked = att_mask * If_next_warped + (1-att_mask)*color_mask
+        If_next_masked = att_mask * (If_next_warped + color_mask)  + ((1 - att_mask) * (If_next_warped + color_mask) -1 ) # experiment_1_2
+        # If_next_masked = att_mask * If_next_warped + (1-att_mask)*color_mask # experiment_4
+        fgmask = self.fgmask_conv(If_next_masked)
+        If_next_masked = fgmask * If_next_masked
         # foreground_mask = #sigmaoid
-        return  If_next_masked, att_mask
+        return  If_next_masked, fgmask
 
 
 class GeneratorB(NetworkBase):

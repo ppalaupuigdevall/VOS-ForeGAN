@@ -16,7 +16,7 @@ class Visualizer:
         for t in range(self._T-1):
             fig = plt.figure()
             ax = plt.gca()
-            ax.imshow(imgs['masks'][t])
+            ax.imshow(imgs['masks'][t][:,:,0])
             self._writer.add_figure('imgs/mask_'+str(self.counter*(self._T -1 )).zfill(6), fig, iteracio)
             # self._writer.add_image('imgs/mask_'+str(self.counter*(self._T -1 )).zfill(6), imgs['masks'][t].reshape(3,224,416), iteracio)
             fig = plt.figure()
