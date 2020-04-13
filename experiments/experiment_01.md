@@ -1,16 +1,17 @@
-#### **_Name_** 
+### **_Name_** 
 experiment_1
 
-#### **_Location_** 
+### **_Location_** 
 `/data/Ponc/VOS-ForeGAN/experiment_1/`
 
-#### **_Details_** Train everything together at the same time, with
+### **_Details_** 
+Train everything together at the same time, with
 
 - lambda_rec  = 10
 - lambda_Db   = 10
 - lambda_Dbgp = 100
 
-#### **_Results_**
+### **_Results_**
 
 :x: Gb does not learn how to impaint
 
@@ -27,5 +28,5 @@ experiment_1
 
 :x: L1 loss reaches a plateau
 
-#### **_Conclusions_**
+### **_Conclusions_**
 - Increase the number of patches to make Gb inpaint the image [Experiment 2]
