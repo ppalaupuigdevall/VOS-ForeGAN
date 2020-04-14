@@ -26,7 +26,7 @@ The interpretation of this expression is the following: A should learn to keep t
 
 :heavy_check_mark: Generated foregrounds capture motion of the object, this did not happened before
 
-:x: Generated foregrounds do not represent as good as before the appearance of the object, it looks kind of brighter...
+:x: Generated foregrounds do not represent as good as before the appearance of the object, it looks kind of brighter.
 
 ![GitHub Logo](/experiments/imgs/experiment_03/fg_blackswan_gif.gif)
 
@@ -42,4 +42,4 @@ The interpretation of this expression is the following: A should learn to keep t
 
 ### **_Conclusions_**
 - The mask that is used to mask the background to generate should be created from Ifg1. [Experiment 4]
-- We should try training first with L1 loss and then lowering lambda_rec to focus more in adversarial losses.
+- We should try training first with L1 loss and then lowering lambda_rec to focus more in adversarial losses
