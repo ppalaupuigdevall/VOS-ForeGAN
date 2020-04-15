@@ -19,6 +19,7 @@ experiment_4
 :x: The quality of the generated images is worse. 
 
 :heacy_check_mark: I discovered why part of the foreground is in the background after several training epochs. If we look at some generated foregreounds and backgrounds, we can see that the foreground is a little bit brighter than the background. This is because the background starts with a scene and a black region. Because of this black region, the network finds it easier to copy the dark values from the background and make a combination of the fg and bg to generate the foreground. In the next experiments, we will replace the black for gaussian noise in the black region of the background to help Gf generating the whole foreground.
+
 ![GitHub Logo](/experiments/imgs/experiment_04/blackswan_bg_gif.gif)
 ![GitHub Logo](/experiments/imgs/experiment_04/blackswan_fg.gif)
 
