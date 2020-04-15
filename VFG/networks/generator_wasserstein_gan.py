@@ -68,12 +68,14 @@ class GeneratorF(NetworkBase):
             self.attention_reg_packs.append(nn.Sequential(*layers_att))
 
             last_layer_dim = int(curr_dim + last_layer_dim/self.factor)
+            if(i==0):
+                self.factor = self.factor + 1
         
         self.img_reg_packs = nn.ModuleList(self.img_reg_packs)
         self.attention_reg_packs = nn.ModuleList(self.attention_reg_packs)
         self.reductor = nn.ModuleList(self.reductor)
-        self.fgmask_conv = nn.Sequential(nn.Conv2d(3,1,7,1,3,bias=False), nn.Sigmoid())
-
+        self.fgmask_conv = nn.Conv2d(64,1,7,1,3,bias=False)
+        self.satsig = nn.Sigmoid()
         self.reset_params()
 
     def reset_params(self):
@@ -97,10 +99,11 @@ class GeneratorF(NetworkBase):
         
         self.t = self.t + 1
         
-        If_next_masked = att_mask * (If_next_warped + color_mask)  + ((1 - att_mask) * (If_next_warped + color_mask) -1 ) # experiment_1_2
-        # If_next_masked = att_mask * If_next_warped + (1-att_mask)*color_mask # experiment_4
-        fgmask = self.fgmask_conv(If_next_masked)
-        If_next_masked = fgmask * If_next_masked
+        # If_next_masked = att_mask * (If_next_warped + color_mask)  + ((1 - att_mask) * (If_next_warped + color_mask) -1 ) # experiment_1_2
+        If_next_masked = att_mask * If_next_warped + (1-att_mask)*color_mask # experiment_4
+        fgmask = self.fgmask_conv(features)
+        fgmask = self.satsig(100*fgmask)
+        If_next_masked = fgmask * If_next_masked + (1-fgmask) * If_next_masked
         # foreground_mask = #sigmaoid
         return  If_next_masked, fgmask
 
@@ -169,6 +172,9 @@ class GeneratorB(NetworkBase):
             self.attention_reg_packs.append(nn.Sequential(*layers_att))
 
             last_layer_dim = int(curr_dim + last_layer_dim/self.factor)
+            if(i==0):
+                self.factor = self.factor + 1
+
 
         self.img_reg_packs = nn.ModuleList(self.img_reg_packs)
         self.attention_reg_packs = nn.ModuleList(self.attention_reg_packs)
@@ -181,10 +187,10 @@ class GeneratorB(NetworkBase):
         self.last_features = [0] * self.T
         self.last_features[0] = torch.tensor([]).cuda()
         self.t = 0
-    def forward(self, Ib_prev_masked, OFprev2next): 
+    def forward(self, Ib_prev_masked): 
 
-        x = torch.cat([Ib_prev_masked, OFprev2next], dim=1)
-
+        # x = torch.cat([Ib_prev_masked, OFprev2next], dim=1)
+        x = Ib_prev_masked
         features = self.main(x)
         to_be_reduced = self.lafeat
         features = torch.cat([self.last_features[self.t], features], dim=1) # Concat in channel dimension

@@ -105,7 +105,7 @@ class ForestGAN(BaseModel):
         return image_patches
 
         
-    def _extract_img_patches(self,x, ch=3, height=224, width=416, kh=60, kw=112,dh=20, dw=36):
+    def _extract_img_patches(self,x, ch=3, height=224, width=416, kh=80, kw=112,dh=20, dw=36):
         patches = x.unfold(2, kh, dh).unfold(3, kw, dw) # 2,3,9,9,60,112
         r = np.random.randint(0,patches.size()[2]*patches.size()[3], self._opt.num_patches)
         r = np.unravel_index(r,(patches.size()[2], patches.size()[3]))
@@ -280,7 +280,8 @@ class ForestGAN(BaseModel):
 
     def _generate_fake_samples(self, t):
         Inext_fake_fg, mask_next_fg = self._Gf(self._curr_f, self._curr_OFs, self._curr_warped_imgs)
-        Inext_fake_bg = self._Gb(self._curr_b, self._curr_OFs)
+        # Inext_fake_bg = self._Gb(self._curr_b, self._curr_OFs)
+        Inext_fake_bg = self._Gb(self._curr_b)
         Inext_fake = (1 - mask_next_fg) * Inext_fake_bg + Inext_fake_fg
         self._visual_masks.append(mask_next_fg)
         self._visual_fgs.append(Inext_fake_fg)
@@ -411,9 +412,6 @@ class ForestGAN(BaseModel):
             visuals['fgs'].append(tensor2im(self._visual_fgs[i][r,:,:,:].cpu().detach()))
             visuals['bgs'].append(tensor2im(self._visual_bgs[i][r,:,:,:].cpu().detach()))
             visuals['fakes'].append(tensor2im(self._visual_fakes[i][r,:,:,:].cpu().detach()))
-
-            
-
         return visuals
     
     def _print_losses(self):

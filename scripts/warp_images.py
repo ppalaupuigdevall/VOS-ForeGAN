@@ -38,9 +38,9 @@ def remap_values(values, xmin, xmax, ymin, ymax):
 resolutions = {0:(140,260), 1:(175,325), 2:(224,416), 3:(280, 520)}
 desired_shape = resolutions[2]
 
-img_dir = '/data/Ponc/DAVIS/JPEGImages/480p/bus/'
-flo_dir = '/data/Ponc/DAVIS/OpticalFlows/bus/'
-mask_dir = '/data/Ponc/DAVIS/Annotations/480p/bus/'
+img_dir = '/data/Ponc/DAVIS/JPEGImages/480p/bear/'
+flo_dir = '/data/Ponc/DAVIS/OpticalFlows/bear/'
+mask_dir = '/data/Ponc/DAVIS/Annotations/480p/bear/'
 
 img_name = '00000.jpg'
 flo_name = '000000.flo'
@@ -55,6 +55,11 @@ mask = cv2.imread(os.path.join(mask_dir, mask_name))
 mask_bg = cv2.bitwise_not(mask)
 print(mask.shape)
 masked_img = cv2.bitwise_and(img, mask)
+noise = np.random.normal(0,1,masked_img.shape) *255 - 127
+noise = np.uint8(noise)
+print(noise.shape)
+masked_noise = cv2.bitwise_and(mask, noise)
+
 
 I_1_warped = warp_flow(masked_img, flow)
 flo_name = '000001.flo'
@@ -70,6 +75,8 @@ I_2_warped_rsz = resize_img(I_2_warped, desired_shape)
 I_3_warped_rsz = resize_img(I_3_warped, desired_shape)
 
 masked_img_bg = cv2.bitwise_and(img, mask_bg)
+masked_bg_noise = masked_img_bg +  masked_noise
+
 u = flow[:,:,0]
 v = flow[:,:,1]
 flow_u_remaped = remap_values(u, -20, 20, 0, 255)
@@ -82,7 +89,7 @@ masked_img_resized = resize_img(masked_img, desired_shape)
 masked_bg_resized = resize_img(masked_img_bg, desired_shape)
 img_warped_resized = resize_img(img_warped,desired_shape)
 flow_u_remaped_resized = resize_gray_img(flow_u_remaped, desired_shape)
-
+masked_bg_noise_resized = resize_img(masked_bg_noise,desired_shape)
 display, save = False, True
 
 if(display):
@@ -100,3 +107,5 @@ if(save):
     cv2.imwrite('./imgs/I1_warp.jpg', I_1_warped_rsz)
     cv2.imwrite('./imgs/I2_warp.jpg', I_2_warped_rsz)
     cv2.imwrite('./imgs/I3_warp.jpg', I_3_warped_rsz)
+    cv2.imwrite('./imgs/masked_noise.jpg', masked_noise)
+    cv2.imwrite('./imgs/masked_bg_noise.jpg', masked_bg_noise_resized)

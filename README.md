@@ -1,5 +1,7 @@
 # GANs
 
+Results in experiments folder
+
 ### TODO
 
  - [x] (Easy) Write architecture patchgan (1h 15m)
