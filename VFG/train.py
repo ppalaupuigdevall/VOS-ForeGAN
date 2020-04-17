@@ -13,7 +13,7 @@ class Train:
         self._opt = TrainOptions().parse()
         self._dataset_train = DavisDataset(self._opt)
 
-        self._data_loader_train = data.DataLoader(self._dataset_train, self._opt.batch_size, drop_last=True)
+        self._data_loader_train = data.DataLoader(self._dataset_train, self._opt.batch_size, drop_last=True, shuffle=True)
 
 
         self._dataset_train_size = len(self._dataset_train)
@@ -81,7 +81,8 @@ class Train:
                 print("VISUAAAAALS")
                 self._display_visualizer_train(self._iteracio)
                 self._last_display_time = time.time()
-
+            # if i_epoch > 300:
+            #     self._opt.lambda_rec = 0.0001
             # # save model
             # if self._last_save_latest_time is None or time.time() - self._last_save_latest_time > self._opt.save_latest_freq_s:
             #     print('saving the latest model (epoch %d, total_steps %d)' % (i_epoch, self._total_steps))

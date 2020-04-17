@@ -105,7 +105,7 @@ class ForestGAN(BaseModel):
         return image_patches
 
         
-    def _extract_img_patches(self,x, ch=3, height=224, width=416, kh=80, kw=112,dh=20, dw=36):
+    def _extract_img_patches(self,x, ch=3, height=224, width=416, kh=60, kw=112,dh=2, dw=2):
         patches = x.unfold(2, kh, dh).unfold(3, kw, dw) # 2,3,9,9,60,112
         r = np.random.randint(0,patches.size()[2]*patches.size()[3], self._opt.num_patches)
         r = np.unravel_index(r,(patches.size()[2], patches.size()[3]))
@@ -308,6 +308,9 @@ class ForestGAN(BaseModel):
             self._move_inputs_to_gpu(t)
             # generate fake samples
             Inext_fake, Inext_fake_fg, Inext_fake_bg = self._generate_fake_samples(t)
+            Inext_fake = Inext_fake.detach()
+            Inext_fake_fg = Inext_fake_fg.detach()
+            Inext_fake_bg = Inext_fake_bg.detach()
             self._curr_f = Inext_fake_fg
             self._curr_b = Inext_fake_bg
             real_samples_fg.append(self._first_fg)

@@ -74,7 +74,7 @@ class GeneratorF(NetworkBase):
         self.img_reg_packs = nn.ModuleList(self.img_reg_packs)
         self.attention_reg_packs = nn.ModuleList(self.attention_reg_packs)
         self.reductor = nn.ModuleList(self.reductor)
-        self.fgmask_conv = nn.Conv2d(64,1,7,1,3,bias=False)
+        self.fgmask_conv = nn.Conv2d(64,1,3,1,1,bias=False)
         self.satsig = nn.Sigmoid()
         self.reset_params()
 
@@ -86,7 +86,7 @@ class GeneratorF(NetworkBase):
     def forward(self, If_prev_masked, OFprev2next, If_next_warped): 
         
         x = torch.cat([If_prev_masked, OFprev2next], dim=1)
-
+        # x = If_next_warped
         features = self.main(x)
         features_ = torch.cat([self.last_features[self.t], features], dim=1) # Concat in channel dimension
 
@@ -94,7 +94,7 @@ class GeneratorF(NetworkBase):
         # print("features_    = ", features_.size())
         color_mask = self.img_reg_packs[self.t](features_)
         att_mask = self.attention_reg_packs[self.t](features_)
-        if(self.t<self.T-2):
+        if(self.t<self.T-1):
             self.last_features[self.t+1] = self.reductor[self.t](features_)
         
         self.t = self.t + 1
@@ -102,7 +102,7 @@ class GeneratorF(NetworkBase):
         # If_next_masked = att_mask * (If_next_warped + color_mask)  + ((1 - att_mask) * (If_next_warped + color_mask) -1 ) # experiment_1_2
         If_next_masked = att_mask * If_next_warped + (1-att_mask)*color_mask # experiment_4
         fgmask = self.fgmask_conv(features)
-        fgmask = self.satsig(100*fgmask)
+        fgmask = self.satsig(20*fgmask)
         If_next_masked = fgmask * If_next_masked + (1-fgmask) * If_next_masked
         # foreground_mask = #sigmaoid
         return  If_next_masked, fgmask

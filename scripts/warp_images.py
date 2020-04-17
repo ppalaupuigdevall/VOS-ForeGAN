@@ -38,9 +38,9 @@ def remap_values(values, xmin, xmax, ymin, ymax):
 resolutions = {0:(140,260), 1:(175,325), 2:(224,416), 3:(280, 520)}
 desired_shape = resolutions[2]
 
-img_dir = '/data/Ponc/DAVIS/JPEGImages/480p/bear/'
-flo_dir = '/data/Ponc/DAVIS/OpticalFlows/bear/'
-mask_dir = '/data/Ponc/DAVIS/Annotations/480p/bear/'
+img_dir = '/data/Ponc/DAVIS/JPEGImages/480p/breakdance-flare/'
+flo_dir = '/data/Ponc/DAVIS/OpticalFlows/breakdance-flare/'
+mask_dir = '/data/Ponc/DAVIS/Annotations/480p/breakdance-flare/'
 
 img_name = '00000.jpg'
 flo_name = '000000.flo'
@@ -70,25 +70,34 @@ flo_name = '000002.flo'
 flow = readFlow(os.path.join(flo_dir, flo_name))
 I_3_warped = warp_flow(I_2_warped, flow)
 
+flo_name = '000003.flo'
+flow = readFlow(os.path.join(flo_dir, flo_name))
+I_4_warped = warp_flow(I_3_warped, flow)
+
+
+
 I_1_warped_rsz = resize_img(I_1_warped, desired_shape)
 I_2_warped_rsz = resize_img(I_2_warped, desired_shape)
 I_3_warped_rsz = resize_img(I_3_warped, desired_shape)
+I_4_warped_rsz = resize_img(I_4_warped, desired_shape)
 
 masked_img_bg = cv2.bitwise_and(img, mask_bg)
-masked_bg_noise = masked_img_bg +  masked_noise
-
+masked_bg_noise = resize_img(masked_img_bg +  masked_noise, desired_shape)
+flo_name = '000000.flo'
+flow = readFlow(os.path.join(flo_dir, flo_name))
 u = flow[:,:,0]
 v = flow[:,:,1]
 flow_u_remaped = remap_values(u, -20, 20, 0, 255)
 flow_v_remaped = remap_values(v, -20, 20, 0, 255)
 
 # Resize ori to warped's shape
-desired_shape = img_warped.shape[:2]
+# desired_shape = img_warped.shape[:2]
 img_ori_resized = resize_img(img, desired_shape)
 masked_img_resized = resize_img(masked_img, desired_shape)
 masked_bg_resized = resize_img(masked_img_bg, desired_shape)
 img_warped_resized = resize_img(img_warped,desired_shape)
 flow_u_remaped_resized = resize_gray_img(flow_u_remaped, desired_shape)
+flow_v_remaped_resized = resize_gray_img(flow_v_remaped, desired_shape)
 masked_bg_noise_resized = resize_img(masked_bg_noise,desired_shape)
 display, save = False, True
 
@@ -102,10 +111,12 @@ if(save):
     cv2.imwrite('./imgs/img_warped_resized.jpg', img_warped_resized)
     cv2.imwrite('./imgs/img_ori_resized.jpg',img_ori_resized)
     cv2.imwrite('./imgs/flow_u_resized.jpg', flow_u_remaped_resized)
+    cv2.imwrite('./imgs/flow_v_resized.jpg', flow_v_remaped_resized)
     cv2.imwrite('./imgs/masked_img.jpg', masked_img_resized)
     cv2.imwrite('./imgs/masked_img_bg.jpg', masked_bg_resized)
     cv2.imwrite('./imgs/I1_warp.jpg', I_1_warped_rsz)
     cv2.imwrite('./imgs/I2_warp.jpg', I_2_warped_rsz)
     cv2.imwrite('./imgs/I3_warp.jpg', I_3_warped_rsz)
+    cv2.imwrite('./imgs/I4_warp.jpg', I_4_warped_rsz)
     cv2.imwrite('./imgs/masked_noise.jpg', masked_noise)
     cv2.imwrite('./imgs/masked_bg_noise.jpg', masked_bg_noise_resized)
