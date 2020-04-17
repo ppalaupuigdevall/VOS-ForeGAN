@@ -181,7 +181,7 @@ class GeneratorB(NetworkBase):
         self.reductor = nn.ModuleList(self.reductor)
 
         
-        self.reset_params()
+        self.reset_params() # commit
 
     def reset_params(self):
         self.last_features = [0] * self.T
