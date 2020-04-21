@@ -37,15 +37,16 @@ class Train:
             # train epoch
             self._train_epoch(i_epoch)
             
-            # save model
-            # print('saving the model at the end of epoch %d, iters %d' % (i_epoch, self._total_steps))
-            # self._model.save(i_epoch)
-
+            
             # print epoch info
             time_epoch = time.time() - epoch_start_time
             print('End of epoch %d / %d \t Time Taken: %d sec (%d min or %d h)' %
                   (i_epoch, self._opt.nepochs_no_decay + self._opt.nepochs_decay, time_epoch,
                    time_epoch / 60, time_epoch / 3600))
+
+            if(i_epoch % 20 == 0):
+                self._model.save(i_epoch)
+                print('saving the model at the end of epoch %d' % (i_epoch))
 
             # update learning rate
             if i_epoch > self._opt.nepochs_no_decay:
@@ -77,7 +78,7 @@ class Train:
             #     self._last_print_time = time.time()
 
             # # # display visualizer
-            if do_visuals or i_epoch%10 == 0:
+            if do_visuals or i_epoch%20 == 0:
                 print("VISUAAAAALS")
                 self._display_visualizer_train(self._iteracio)
                 self._last_display_time = time.time()

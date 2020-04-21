@@ -19,6 +19,13 @@ class NetworksFactory:
         elif network_name == 'discriminator_wasserstein_gan':
             from networks.discriminator_wasserstein_gan_patchgan import Discriminator
             network = Discriminator(*args, **kwargs)
+        elif network_name == 'generator_wasserstein_gan_b_static_ACR':
+            from networks.generator_wasserstein_gan_static_ACR import GeneratorB_static_ACR
+            network = GeneratorB_static_ACR(*args, **kwargs)
+        
+        elif network_name == 'generator_wasserstein_gan_f_static_ACR':
+            from networks.generator_wasserstein_gan_static_ACR import GeneratorF_static_ACR
+            network = GeneratorF_static_ACR(*args, **kwargs)
         else:
             raise ValueError("Network %s not recognized." % network_name)
 

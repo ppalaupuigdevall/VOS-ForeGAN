@@ -14,6 +14,9 @@ class ModelsFactory:
             from models.forestgan import ForestGAN
             
             model = ForestGAN(*args, **kwargs)
+        elif model_name == 'forestgan_pure_rnn':
+            from models.forestgan_pure_rnn import ForestGANpureRNN
+            model = ForestGANpureRNN(*args, **kwargs)
         else:
             raise ValueError("Model %s not recognized." % model_name)
 
