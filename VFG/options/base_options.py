@@ -13,15 +13,20 @@ class BaseOptions():
         self._parser.add_argument('--OF_dir',           type=str,   default="/data/Ponc/DAVIS/OpticalFlows/",       help='path to OFs folder')
         self._parser.add_argument('--mask_dir',         type=str,   default="/data/Ponc/DAVIS/Annotations/480p/",   help='path to masks folder')
         self._parser.add_argument('--resolution',       type=tuple, default=(224, 416),                             help='default image resolution')
-        self._parser.add_argument('--T',                type=int,   default=7,                                      help='temporal horizon')
+        self._parser.add_argument('--T',                type=int,   default=14,                                      help='temporal horizon')
         self._parser.add_argument('--batch_size',       type=int,   default=1,                                      help='input batch size')
-        self._parser.add_argument('--gpu_ids',          type=str,   default='2',                                    help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
+        self._parser.add_argument('--gpu_ids',          type=str,   default='1',                                    help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
 
         self._parser.add_argument('--model',            type=str,   default='forestgan_pure_rnn',                            help='there is only this one so do not change it')
-        self._parser.add_argument('--load_epoch',       type=int,   default=100,                                     help='which epoch to load? set to -1 to use latest cached model')
+        self._parser.add_argument('--load_epoch',       type=int,   default=3060,                                     help='which epoch to load? set to -1 to use latest cached model')
         self._parser.add_argument('--name',             type=str,   default='experiment_13',                         help='name of the experiment. It decides where to store samples and models')
         self._parser.add_argument('--checkpoints_dir',  type=str,   default='/data/Ponc/VOS-ForeGAN/',                        help='models are saved here')
         self._parser.add_argument('--save_path',        type=str,   default='/data/Ponc/VOS-ForeGAN/')
+        self._parser.add_argument('--val_dir',          type=str,   default='/data/Ponc/DAVIS/OFs_overfit/')
+        self._parser.add_argument('--T_val',            type=int,   default=14)
+        self._parser.add_argument('--val_batch_size',   type=int,   default=1)
+        self._parser.add_argument('--val_dir_save',          type=str,   default='./imgs/')
+        
         self._initialized = True
 
     def parse(self):

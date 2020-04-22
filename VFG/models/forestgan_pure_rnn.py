@@ -20,7 +20,7 @@ class ForestGANpureRNN(BaseModel):
         self._T = opt.T
         # create networks
         self._init_create_networks()
-
+        self._is_train = False
         # init train variables
         if self._is_train:
             self._init_train_vars()
@@ -246,7 +246,6 @@ class ForestGANpureRNN(BaseModel):
                 self._Gf.reset_params()
                 self._Gb.reset_params()
                 self._print_losses()
-            
 
 
     def _forward_G(self):
@@ -288,6 +287,21 @@ class ForestGANpureRNN(BaseModel):
         self._visual_bgs.append(Inext_fake_bg)
         self._visual_fakes.append(Inext_fake)
         return Inext_fake, Inext_fake_fg, Inext_fake_bg
+
+    
+    def forward(self, T):
+        fgs = []
+        bgs = []
+        with torch.no_grad():
+            for t in range(T-1):
+                self._generate_fake_samples(t)
+                Inext_fake, Inext_fake_fg, Inext_fake_bg = self._generate_fake_samples(t)
+                self._curr_f = Inext_fake_fg 
+                self._curr_b = Inext_fake_bg
+                self._curr_OFs = self._OFs[t].cuda()
+                fgs.append(Inext_fake_fg)
+                bgs.append(Inext_fake_bg)
+        return fgs, bgs
 
 
     def _forward_D(self):

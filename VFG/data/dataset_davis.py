@@ -58,11 +58,11 @@ def remap_values(values, xmin, xmax, ymin, ymax):
 
 class DavisDataset(data.Dataset):
     
-    def __init__(self, conf):
+    def __init__(self, conf, T, OF_dir):
         super(DavisDataset, self).__init__()
         
         self.img_dir = conf.img_dir
-        self.OF_dir = conf.OF_dir
+        self.OF_dir = OF_dir
         self.mask_dir = conf.mask_dir
         self.categories = os.listdir(self.OF_dir)
         self.num_categories = len(self.categories)
@@ -74,7 +74,7 @@ class DavisDataset(data.Dataset):
             self.masks_by_cat[cat] = sorted(os.listdir(os.path.join(self.mask_dir, cat)))
 
         self.resolution = (conf.resolution)
-        self.T = conf.T
+        self.T = T
         self.create_transform()
         self.shift = False #TODO: set variable to give mask in sample or not depending on score of Discriminator 
     

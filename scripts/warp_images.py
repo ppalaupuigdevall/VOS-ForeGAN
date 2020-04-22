@@ -38,9 +38,11 @@ def remap_values(values, xmin, xmax, ymin, ymax):
 resolutions = {0:(140,260), 1:(175,325), 2:(224,416), 3:(280, 520)}
 desired_shape = resolutions[2]
 
-img_dir = '/data/Ponc/DAVIS/JPEGImages/480p/breakdance-flare/'
-flo_dir = '/data/Ponc/DAVIS/OpticalFlows/breakdance-flare/'
-mask_dir = '/data/Ponc/DAVIS/Annotations/480p/breakdance-flare/'
+img_dir = '/data/Ponc/DAVIS/JPEGImages/480p/rollerblade/'
+flo_dir = '/data/Ponc/DAVIS/OpticalFlows/rollerblade/'
+mask_dir = '/data/Ponc/DAVIS/Annotations/480p/rollerblade/'
+
+img_list = sorted(os.listdir(img_dir))
 
 img_name = '00000.jpg'
 flo_name = '000000.flo'
@@ -101,6 +103,10 @@ flow_v_remaped_resized = resize_gray_img(flow_v_remaped, desired_shape)
 masked_bg_noise_resized = resize_img(masked_bg_noise,desired_shape)
 display, save = False, True
 
+list_of_resized_ims = []
+for i in range(7):
+    list_of_resized_ims.append(resize_img(cv2.imread(os.path.join(img_dir, img_list[i])), desired_shape))
+
 if(display):
     cv2.imshow('v', flow_v_remaped)
     cv2.waitKey(0)
@@ -120,3 +126,5 @@ if(save):
     cv2.imwrite('./imgs/I4_warp.jpg', I_4_warped_rsz)
     cv2.imwrite('./imgs/masked_noise.jpg', masked_noise)
     cv2.imwrite('./imgs/masked_bg_noise.jpg', masked_bg_noise_resized)
+    for i in range(7):
+        cv2.imwrite('./imgs/'+str(i)+'.jpg', list_of_resized_ims[i])
