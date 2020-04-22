@@ -9,8 +9,8 @@ import os
 import numpy as np
 import torch.nn.functional as F
 from data.dataset_davis import tensor2im
-
 import cv2
+
 class ForestGANpureRNN(BaseModel):
     def __init__(self, opt):
         
@@ -18,9 +18,11 @@ class ForestGANpureRNN(BaseModel):
         self._name = 'forestgan_pure_rnn'
         self._opt = opt
         self._T = opt.T
+
         # create networks
         self._init_create_networks()
-        self._is_train = False
+        self._is_train = opt.is_train
+        
         # init train variables
         if self._is_train:
             self._init_train_vars()
@@ -42,14 +44,13 @@ class ForestGANpureRNN(BaseModel):
         self._real_bg_patches = self._extract_real_patches(self._opt, self._first_fg, self._first_bg) # NOTE TODO This could be done for each t
         self._move_inputs_to_gpu(0)
         
+
     def _move_inputs_to_gpu(self, t):
-        
         if(t==0):
             self._visual_masks = []
             self._visual_fgs = []
             self._visual_bgs = []
             self._visual_fakes = []
-            # Move everytrhing to GPU
             self._next_frame_imgs_ori = self._imgs[t+1].cuda()
             self._curr_OFs = self._OFs[t].cuda()
             self._curr_warped_imgs = self._warped_imgs[t].cuda()
@@ -58,8 +59,6 @@ class ForestGANpureRNN(BaseModel):
             self._first_fg = self._first_fg.cuda()
             self._first_bg = self._first_bg.cuda()
             self._real_bg_patches = self._real_bg_patches.cuda()
-            
-
         else:
             self._curr_OFs = self._OFs[t].cuda()
             self._curr_warped_imgs = self._warped_imgs[t].cuda()
@@ -117,28 +116,24 @@ class ForestGANpureRNN(BaseModel):
 
     def _init_create_networks(self):
         
-        # generator foreground network
         self._Gf = self._create_generator_f()
         self._Gf.init_weights()
         if len(self._gpu_ids) > 1:
             self._Gf = torch.nn.DataParallel(self._Gf, device_ids=self._gpu_ids)
         self._Gf.cuda()
 
-         # generator foreground network
         self._Gb = self._create_generator_b()
         self._Gb.init_weights()
         if len(self._gpu_ids) > 1:
             self._Gb = torch.nn.DataParallel(self._Gb, device_ids=self._gpu_ids)
         self._Gb.cuda()
 
-        # discriminator network
         self._Df = self._create_discriminator_f()
         self._Df.init_weights()
         if len(self._gpu_ids) > 1:
             self._Df = torch.nn.DataParallel(self._Df, device_ids=self._gpu_ids)
         self._Df.cuda()
 
-        # discriminator network
         self._Db = self._create_discriminator_b()
         self._Db.init_weights()
         if len(self._gpu_ids) > 1:
@@ -173,10 +168,8 @@ class ForestGANpureRNN(BaseModel):
         self._optimizer_Db = torch.optim.Adam(self._Db.parameters(), lr=self._current_lr_Db,
                                              betas=[self._opt.Db_adam_b1, self._opt.Db_adam_b2])
         
-
     def _init_losses(self):
         # define loss functions
-        # self._criterion_Gs_rec = torch.nn.MSELoss().cuda()
         self._criterion_Gs_rec = torch.nn.L1Loss().cuda()
 
         # init losses G
@@ -206,6 +199,7 @@ class ForestGANpureRNN(BaseModel):
         self._Gb.eval()
         self._Db.eval()
         self._is_train = False
+
 
     def optimize_parameters(self, train_generator=True, save_imgs = False):
         if self._is_train:
@@ -279,7 +273,6 @@ class ForestGANpureRNN(BaseModel):
 
     def _generate_fake_samples(self, t):
         Inext_fake_fg, mask_next_fg = self._Gf(self._curr_f, self._curr_OFs, self._curr_warped_imgs)
-        # Inext_fake_bg = self._Gb(self._curr_b, self._curr_OFs)
         Inext_fake_bg = self._Gb(self._curr_b)
         Inext_fake = (1 - mask_next_fg) * Inext_fake_bg + Inext_fake_fg
         self._visual_masks.append(mask_next_fg)
@@ -318,7 +311,7 @@ class ForestGANpureRNN(BaseModel):
         self._loss_db_fake = torch.cuda.FloatTensor([0])
 
         for t in range(self._T-1):    # 0, 1, 2, 3,..., T-2,
-            # print("-------------- t = ", t)
+          
             self._move_inputs_to_gpu(t)
             # generate fake samples
             Inext_fake, Inext_fake_fg, Inext_fake_bg = self._generate_fake_samples(t)
@@ -329,6 +322,7 @@ class ForestGANpureRNN(BaseModel):
             self._curr_b = Inext_fake_bg
             real_samples_fg.append(self._first_fg)
             fake_samples_fg.append(Inext_fake_fg)
+
             # Df(real_fg) & Df(fake_fg)
             d_real_fg = self._Df(self._first_fg) # NOTE: here we could use lucida dream?
             self._loss_df_real = self._loss_df_real + self._compute_loss_D(d_real_fg, True) * self._opt.lambda_Df_prob
@@ -372,6 +366,7 @@ class ForestGANpureRNN(BaseModel):
 
         return loss_d_gp
 
+
     def _gradient_penalty_Db(self, real_samples, fake_samples):
         # interpolate sample
         alpha = torch.rand(self._opt.num_patches * self._opt.batch_size, 1, 1, 1).cuda().expand_as(real_samples)
@@ -392,6 +387,7 @@ class ForestGANpureRNN(BaseModel):
         loss_d_gp = torch.mean((grad_l2norm - 1) ** 2)
 
         return loss_d_gp
+
 
     def _compute_loss_D(self, estim, is_real):
         return -torch.mean(estim) if is_real else torch.mean(estim)
@@ -476,7 +472,6 @@ class ForestGANpureRNN(BaseModel):
         # save optimizers
         self._save_optimizer(self._optimizer_Gf, 'Gf', label)
         self._save_optimizer(self._optimizer_Gb, 'Gb', label)
-
         self._save_optimizer(self._optimizer_Df, 'Df', label)
         self._save_optimizer(self._optimizer_Db, 'Db', label)
 
@@ -496,13 +491,3 @@ class ForestGANpureRNN(BaseModel):
             self._load_optimizer(self._optimizer_Gb, 'Gb', load_epoch)
             self._load_optimizer(self._optimizer_Df, 'Df', load_epoch)
             self._load_optimizer(self._optimizer_Db, 'Db', load_epoch)
-
-
-    def _save_img(self, ffg, fbg):
-        for i in range(self._T-1):
-
-            cv2.imwrite('fg1'+str(i)+'.jpeg',cv2.cvtColor(tensor2im(ffg[i][0,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR))
-            cv2.imwrite('bg1'+str(i)+'.jpeg',cv2.cvtColor(tensor2im(fbg[i][0,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR))
-            # cv2.imwrite('mask.jpeg',cv2.cvtColor(tensor2im(self._mask[0,:,:,:].expand_as(self._curr_f[0,:,:,:].cpu().detach())), cv2.COLOR_RGB2BGR))
-        cv2.imwrite('fg_1_.jpeg',cv2.cvtColor(tensor2im(self._curr_f[0,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR))
-        cv2.imwrite('bg_1_.jpeg',cv2.cvtColor(tensor2im(self._curr_b[0,:,:,:].cpu().detach()), cv2.COLOR_RGB2BGR))

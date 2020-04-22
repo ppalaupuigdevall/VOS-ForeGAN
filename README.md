@@ -15,8 +15,11 @@ Results in experiments folder
  - [x] (Normal & urgent) Write extract_real_patches so it gives REAL patches where there's no foreground
  - [x] (Ultra difficult) Implement gradient penalty and optimize parameters
  - [x] (Difficult) Why part of the generator is not in the GPU?
- - [ ] Create mask from sigmoid saturated sigmoid( alpha * (x  + (1-eps) ) )
- - [ ] Remove OF from input
+ - [x] Create mask from sigmoid saturated sigmoid( alpha * (x  + (1-eps) ) )
+ - [x] Remove OF from input
+ - [ ] Create visualizations
+ - [ ] Make DatasetDavis for instant t
+-  [ ] Clean generate_random_samples
 
 ### Setup
 

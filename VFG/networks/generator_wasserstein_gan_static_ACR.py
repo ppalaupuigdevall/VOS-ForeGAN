@@ -69,7 +69,6 @@ class GeneratorF_static_ACR(NetworkBase):
     def forward(self, If_prev_masked, OFprev2next, If_next_warped): 
         
         x = torch.cat([If_prev_masked, OFprev2next], dim=1)
-        # x = If_next_warped
         features = self.main(x)
         features_ = self.last_features + features
         color_mask = self.img_reg_packs(features_)
@@ -78,7 +77,7 @@ class GeneratorF_static_ACR(NetworkBase):
             self.last_features = self.reductor(features_)
         self.t = self.t + 1
         
-        If_next_masked = att_mask * If_prev_masked + (1-att_mask)*color_mask # experiment_4
+        If_next_masked = att_mask * If_prev_masked + (1-att_mask)*color_mask
         fgmask = self.fgmask_conv(features)
         fgmask = self.satsig(30*fgmask)
         If_next_masked = fgmask * If_next_masked + (1-fgmask) * If_next_masked
@@ -150,8 +149,7 @@ class GeneratorB_static_ACR(NetworkBase):
         self.t = 0
 
     def forward(self, Ib_prev_masked): 
-
-        # x = torch.cat([Ib_prev_masked, OFprev2next], dim=1)
+    
         x = Ib_prev_masked
         features = self.main(x)
         features = self.last_features + features
@@ -161,7 +159,6 @@ class GeneratorB_static_ACR(NetworkBase):
             self.last_features = self.reductor(features)
         self.t = self.t + 1
         Ib_next = att_mask * (Ib_prev_masked) + (1-att_mask)*color_mask # Whole background cuda0
-        # Ib_next = att_mask * (color_mask) + (1-att_mask)*Ib_prev_masked  # Whole background cuda0
         return Ib_next
 
 
