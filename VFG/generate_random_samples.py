@@ -1,4 +1,3 @@
-import time
 from options.test_options import TestOptions
 from data.dataset_davis import DavisDataset, tensor2im
 from models.models import ModelsFactory

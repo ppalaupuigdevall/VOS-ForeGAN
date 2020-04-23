@@ -12,11 +12,13 @@ class ModelsFactory:
 
         if model_name == 'forestgan':
             from models.forestgan import ForestGAN
-            
             model = ForestGAN(*args, **kwargs)
         elif model_name == 'forestgan_pure_rnn':
             from models.forestgan_pure_rnn import ForestGANpureRNN
             model = ForestGANpureRNN(*args, **kwargs)
+        elif model_name == 'forestgan_pure_rnn_noof':
+            from models.forestgan_pure_rnn_noOF import ForestGANpureRNNnoOF
+            model = ForestGANpureRNNnoOF(*args, **kwargs)
         else:
             raise ValueError("Model %s not recognized." % model_name)
 
@@ -31,10 +33,7 @@ class BaseModel(object):
 
         self._opt = opt
         self._gpu_ids = opt.gpu_ids
-        print(self._gpu_ids)
         self._is_train = opt.is_train
-
-       
         self._save_dir = os.path.join(opt.checkpoints_dir, opt.name)
 
 
@@ -92,7 +91,7 @@ class BaseModel(object):
         load_filename = 'opt_epoch_%s_id_%s.pth' % (epoch_label, optimizer_label)
         load_path = os.path.join(self._save_dir, load_filename)
         assert os.path.exists(
-            load_path), 'Weights file not found. Have you trained a model!? We are not providing one' % load_path
+            load_path), 'Weights file not found. ' % load_path
 
         optimizer.load_state_dict(torch.load(load_path))
         print('loaded optimizer: %s' % load_path)

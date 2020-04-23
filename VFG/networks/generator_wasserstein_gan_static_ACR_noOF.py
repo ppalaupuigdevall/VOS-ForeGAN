@@ -3,11 +3,11 @@ import numpy as np
 from networks.networks import NetworkBase, NetworksFactory
 import torch
 
-class GeneratorF_static_ACR(NetworkBase):
+class GeneratorF_static_ACR_noOF(NetworkBase):
     """Generator. Encoder-Decoder Architecture."""
     def __init__(self, c_dim, T, conv_dim=64, repeat_num=6):
-        super(GeneratorF_static_ACR, self).__init__()
-        self._name = 'generator_wasserstein_gan_f_static_ACR'
+        super(GeneratorF_static_ACR_noOF, self).__init__()
+        self._name = 'generator_wasserstein_gan_f_static_ACR_noOF'
         self.T = T
         self.t = 0
         self.factor = 1
@@ -66,9 +66,9 @@ class GeneratorF_static_ACR(NetworkBase):
         self.last_features = torch.zeros(64,224,416).cuda()
         self.t = 0
         
-    def forward(self, If_prev_masked, OFprev2next, If_next_warped): 
-        
-        x = torch.cat([If_prev_masked, OFprev2next], dim=1)
+    def forward(self, If_prev_masked, Inext): 
+        # Inext_flipped = Inext.flip(3)
+        x = torch.cat([If_prev_masked, Inext], dim=1)
         features = self.main(x)
         features_ = self.last_features + features
         color_mask = self.img_reg_packs(features_)
@@ -76,12 +76,13 @@ class GeneratorF_static_ACR(NetworkBase):
         if(self.t<self.T-1):
             self.last_features = self.reductor(features_)
         self.t = self.t + 1
-        
+
         If_next_masked = att_mask * If_prev_masked + (1-att_mask)*color_mask 
         fgmask = self.fgmask_conv(features)
         fgmask = self.satsig(30*fgmask)
+        
         If_next_masked = fgmask * If_next_masked + (1-fgmask) * If_next_masked
-
+        
         return  If_next_masked, fgmask
 
 

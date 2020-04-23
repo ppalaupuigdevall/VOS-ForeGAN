@@ -11,40 +11,34 @@ from utils.visualizer import Visualizer
 class Train:
     def __init__(self):
         self._opt = TrainOptions().parse()
-        self._dataset_train = DavisDataset(self._opt)
 
+        self._dataset_train = DavisDataset(self._opt, self._opt.T, self._opt.OF_dir)
         self._data_loader_train = data.DataLoader(self._dataset_train, self._opt.batch_size, drop_last=True, shuffle=True)
-
-
         self._dataset_train_size = len(self._dataset_train)
-        print('#train images = %d' % self._dataset_train_size)
+        print('# Train videos = %d' % self._dataset_train_size)
 
         self._model = ModelsFactory.get_by_name(self._opt.model, self._opt)
+        
         self._tb_visualizer = Visualizer(self._opt)
 
         self._train()
 
+
     def _train(self):
         self._total_steps = self._opt.load_epoch * self._dataset_train_size
         self._iters_per_epoch = self._dataset_train_size / self._opt.batch_size
-        self._last_display_time = None
-        self._last_save_latest_time = None
-        self._last_print_time = time.time()
         self._iteracio = 0
         for i_epoch in range(self._opt.load_epoch + 1, self._opt.nepochs_no_decay + self._opt.nepochs_decay + 1):
             epoch_start_time = time.time()
 
             # train epoch
             self._train_epoch(i_epoch)
-            
-            
-            # print epoch info
             time_epoch = time.time() - epoch_start_time
             print('End of epoch %d / %d \t Time Taken: %d sec (%d min or %d h)' %
                   (i_epoch, self._opt.nepochs_no_decay + self._opt.nepochs_decay, time_epoch,
                    time_epoch / 60, time_epoch / 3600))
 
-            if(i_epoch % 20 == 0):
+            if(i_epoch % 100 == 0):
                 self._model.save(i_epoch)
                 print('saving the model at the end of epoch %d' % (i_epoch))
 
@@ -52,17 +46,13 @@ class Train:
             if i_epoch > self._opt.nepochs_no_decay:
                 self._model.update_learning_rate()
 
+
     def _train_epoch(self, i_epoch):
         epoch_iter = 0
         self._model.set_train()
         print("--- - - - - - - EPOCH ", i_epoch, " - - - - ")
         for i_train_batch, train_batch in enumerate(self._data_loader_train):
             iter_start_time = time.time()
-            
-            # display flags
-            do_visuals = self._last_display_time is None or time.time() - self._last_display_time > self._opt.display_freq_s
-            # do_print_terminal = time.time() - self._last_print_time > self._opt.print_freq_s or do_visuals
-
             # train model
             self._model.set_input(train_batch)
             train_generator = ((i_train_batch+1) % self._opt.train_G_every_n_iterations == 0)
@@ -71,71 +61,14 @@ class Train:
             # update epoch info
             self._total_steps += self._opt.batch_size
             epoch_iter += self._opt.batch_size
-
-            # # display terminal
-            # if do_print_terminal:
-            #     self._display_terminal(iter_start_time, i_epoch, i_train_batch, do_visuals)
-            #     self._last_print_time = time.time()
-
-            # # # display visualizer
-            if do_visuals or i_epoch%20 == 0:
-                print("VISUAAAAALS")
+            # display visualizer
+            if i_epoch%10 == 0:
                 self._display_visualizer_train(self._iteracio)
                 self._last_display_time = time.time()
-            # if i_epoch > 300:
-            #     self._opt.lambda_rec = 0.0001
-            # # save model
-            # if self._last_save_latest_time is None or time.time() - self._last_save_latest_time > self._opt.save_latest_freq_s:
-            #     print('saving the latest model (epoch %d, total_steps %d)' % (i_epoch, self._total_steps))
-            #     self._model.save(i_epoch)
-            #     self._last_save_latest_time = time.time()
-
-    def _display_terminal(self, iter_start_time, i_epoch, i_train_batch, visuals_flag):
-        errors = self._model.get_current_errors()
-        t = (time.time() - iter_start_time) / self._opt.batch_size
-        self._tb_visualizer.print_current_train_errors(i_epoch, i_train_batch, self._iters_per_epoch, errors, t, visuals_flag)
-
+            
     def _display_visualizer_train(self, iteracio):
         self._tb_visualizer.display_current_results(self._model.get_imgs(), iteracio)
         self._tb_visualizer.plot_scalars(self._model.get_losses(), iteracio)
-
-    def _display_visualizer_val(self, i_epoch, total_steps):
-        val_start_time = time.time()
-
-        # set model to eval
-        self._model.set_eval()
-
-        # evaluate self._opt.num_iters_validate epochs
-        val_errors = OrderedDict()
-        for i_val_batch, val_batch in enumerate(self._dataset_test):
-            if i_val_batch == self._opt.num_iters_validate:
-                break
-
-            # evaluate model
-            self._model.set_input(val_batch)
-            self._model.forward(keep_data_for_visuals=(i_val_batch == 0))
-            errors = self._model.get_current_errors()
-
-            # store current batch errors
-            for k, v in errors.iteritems():
-                if k in val_errors:
-                    val_errors[k] += v
-                else:
-                    val_errors[k] = v
-
-        # normalize errors
-        for k in val_errors.iterkeys():
-            val_errors[k] /= self._opt.num_iters_validate
-
-        # visualize
-        t = (time.time() - val_start_time)
-        self._tb_visualizer.print_current_validate_errors(i_epoch, val_errors, t)
-        self._tb_visualizer.plot_scalars(val_errors, total_steps, is_train=False)
-        self._tb_visualizer.display_current_results(self._model.get_current_visuals(), total_steps, is_train=False)
-
-        # set model back to train
-        self._model.set_train()
-
 
 if __name__ == "__main__":
     Train()
