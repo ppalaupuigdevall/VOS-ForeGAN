@@ -282,19 +282,30 @@ class ForestGANpureRNN(BaseModel):
         return Inext_fake, Inext_fake_fg, Inext_fake_bg
 
     
+    def _generate_fake_samples_test(self, t):
+        Inext_fake_fg, mask_next_fg = self._Gf(self._curr_f, self._curr_OFs, self._curr_warped_imgs)
+        Inext_fake_bg = self._Gb(self._curr_b)
+        Inext_fake = (1 - mask_next_fg) * Inext_fake_bg + Inext_fake_fg
+        return Inext_fake, Inext_fake_fg, Inext_fake_bg, mask_next_fg
+
+
     def forward(self, T):
         fgs = []
         bgs = []
+        fakes = []
+        masks = []
         with torch.no_grad():
             for t in range(T-1):
                 self._generate_fake_samples(t)
-                Inext_fake, Inext_fake_fg, Inext_fake_bg = self._generate_fake_samples(t)
+                Inext_fake, Inext_fake_fg, Inext_fake_bg, mask_next_fg = self._generate_fake_samples_test(t)
                 self._curr_f = Inext_fake_fg 
                 self._curr_b = Inext_fake_bg
                 self._curr_OFs = self._OFs[t].cuda()
                 fgs.append(Inext_fake_fg)
                 bgs.append(Inext_fake_bg)
-        return fgs, bgs
+                fakes.append(Inext_fake)
+                masks.append(mask_next_fg)
+        return fgs, bgs, fakes, masks
 
 
     def _forward_D(self):

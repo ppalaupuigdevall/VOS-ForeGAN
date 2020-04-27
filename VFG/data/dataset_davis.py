@@ -45,6 +45,14 @@ def resize_gray_img(img, size):
     # img_cv2_resized = np.array(img_pil_resized)
     return img_pil_resized
 
+def resize_img_cv2(img, size):
+    img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    resi = transforms.Compose([transforms.Resize(size)])
+    img_pil_resized = resi(img_pil)
+    img_cv2_resized = cv2.cvtColor(np.array(img_pil_resized), cv2.COLOR_RGB2BGR)
+    return img_cv2_resized
+
+
 def remap_values(values, xmin, xmax, ymin, ymax):
     """
     Remaps values with a positive straight line (es podria posar com a parametre si fos ppendent >0 o <0)
