@@ -39,66 +39,65 @@ resolutions = {0:(140,260), 1:(175,325), 2:(224,416), 3:(280, 520)}
 desired_shape = resolutions[2]
 
 img_dir = '/data/Ponc/DAVIS/JPEGImages/480p/rollerblade/'
-flo_dir = '/data/Ponc/DAVIS/OpticalFlows/rollerblade/'
+flo_dir = '/data/Ponc/DAVIS/newFlows/rollerblade/'
 mask_dir = '/data/Ponc/DAVIS/Annotations/480p/rollerblade/'
 
 img_list = sorted(os.listdir(img_dir))
 
 img_name = '00000.jpg'
-flo_name = '000000.flo'
+flo_name = '00000.npy'
 mask_name = '00000.png'
 
 
-
-flow = readFlow(os.path.join(flo_dir, flo_name))
+flow = np.load(os.path.join(flo_dir, flo_name))
+print(flow.shape)
 img = cv2.imread(os.path.join(img_dir, img_name))
-img_warped = warp_flow(img, flow)
 mask = cv2.imread(os.path.join(mask_dir, mask_name))
 mask_bg = cv2.bitwise_not(mask)
-print(mask.shape)
-masked_img = cv2.bitwise_and(img, mask)
-noise = np.random.normal(0,1,masked_img.shape) *255 - 127
-noise = np.uint8(noise)
-print(noise.shape)
-masked_noise = cv2.bitwise_and(mask, noise)
-masked_img_bg = cv2.bitwise_and(img, mask_bg)
-masked_bg_noise = resize_img(masked_img_bg +  masked_noise, desired_shape)
 
-I_1_warped = warp_flow(masked_img, flow)
-I_bg_1_warp = warp_flow(masked_bg_noise, flow)
-flo_name = '000001.flo'
-flow = readFlow(os.path.join(flo_dir, flo_name))
+img_warped = warp_flow(img, flow)
+masked_fg = cv2.bitwise_and(img, mask)
+noise = np.random.normal(0,1,masked_fg.shape) *255 - 127
+noise = np.uint8(noise)
+masked_noise = cv2.bitwise_and(mask, noise)
+
+masked_bg = cv2.bitwise_and(img, mask_bg)
+masked_bg_noise = resize_img(masked_bg +  masked_noise, desired_shape)
+bg_warped = warp_flow(masked_bg, flow)
+
+I_1_warped = warp_flow(masked_fg, flow)
+I_bg_1_warp = warp_flow(masked_bg, flow)
+flo_name = '00001.npy'
+flow = np.load(os.path.join(flo_dir, flo_name))
 I_2_warped = warp_flow(I_1_warped, flow)
 I_bg_2_warp = warp_flow(I_bg_1_warp, flow)
-flo_name = '000002.flo'
-flow = readFlow(os.path.join(flo_dir, flo_name))
+flo_name = '00002.npy'
+flow = np.load(os.path.join(flo_dir, flo_name))
 I_3_warped = warp_flow(I_2_warped, flow)
 I_bg_3_warp = warp_flow(I_bg_2_warp, flow)
-
-flo_name = '000003.flo'
-flow = readFlow(os.path.join(flo_dir, flo_name))
+flo_name = '00003.npy'
+flow = np.load(os.path.join(flo_dir, flo_name))
 I_4_warped = warp_flow(I_3_warped, flow)
 I_bg_4_warp = warp_flow(I_bg_3_warp, flow)
-
 
 I_1_warped_rsz = resize_img(I_1_warped, desired_shape)
 I_2_warped_rsz = resize_img(I_2_warped, desired_shape)
 I_3_warped_rsz = resize_img(I_3_warped, desired_shape)
 I_4_warped_rsz = resize_img(I_4_warped, desired_shape)
 
-
-flo_name = '000000.flo'
-flow = readFlow(os.path.join(flo_dir, flo_name))
+flo_name = '00000.npy'
+flow = np.load(os.path.join(flo_dir, flo_name))
 u = flow[:,:,0]
 v = flow[:,:,1]
-flow_u_remaped = remap_values(u, -20, 20, 0, 255)
-flow_v_remaped = remap_values(v, -20, 20, 0, 255)
+flow_u_remaped = remap_values(u, -35, 35, 0, 255)
+flow_v_remaped = remap_values(v, -35, 35, 0, 255)
+
 
 # Resize ori to warped's shape
 # desired_shape = img_warped.shape[:2]
 img_ori_resized = resize_img(img, desired_shape)
-masked_img_resized = resize_img(masked_img, desired_shape)
-masked_bg_resized = resize_img(masked_img_bg, desired_shape)
+masked_fg_resized = resize_img(masked_fg, desired_shape)
+masked_bg_resized = resize_img(masked_bg, desired_shape)
 img_warped_resized = resize_img(img_warped,desired_shape)
 flow_u_remaped_resized = resize_gray_img(flow_u_remaped, desired_shape)
 flow_v_remaped_resized = resize_gray_img(flow_v_remaped, desired_shape)
@@ -115,22 +114,23 @@ if(display):
     cv2.destroyAllWindows()
 
 if(save):
-    cv2.imwrite('./imgs/old/warp1.jpg', img_warped)
-    cv2.imwrite('./imgs/old/img_warped_resized.jpg', img_warped_resized)
-    cv2.imwrite('./imgs/old/img_ori_resized.jpg',img_ori_resized)
-    cv2.imwrite('./imgs/old/flow_u_resized.jpg', flow_u_remaped_resized)
-    cv2.imwrite('./imgs/old/flow_v_resized.jpg', flow_v_remaped_resized)
-    cv2.imwrite('./imgs/old/masked_img.jpg', masked_img_resized)
-    cv2.imwrite('./imgs/old/masked_img_bg.jpg', masked_bg_resized)
-    cv2.imwrite('./imgs/old/I1_warp.jpg', I_1_warped_rsz)
-    cv2.imwrite('./imgs/old/I2_warp.jpg', I_2_warped_rsz)
-    cv2.imwrite('./imgs/old/I3_warp.jpg', I_3_warped_rsz)
-    cv2.imwrite('./imgs/old/I4_warp.jpg', I_4_warped_rsz)
-    cv2.imwrite('./imgs/old/I_bg_1_warp.jpg', I_bg_1_warp)
-    cv2.imwrite('./imgs/old/I_bg_2_warp.jpg', I_bg_2_warp)
-    cv2.imwrite('./imgs/old/I_bg_3_warp.jpg', I_bg_3_warp)
-    cv2.imwrite('./imgs/old/I_bg_4_warp.jpg', I_bg_4_warp)
-    cv2.imwrite('./imgs/old/masked_noise.jpg', masked_noise)
-    cv2.imwrite('./imgs/old/masked_bg_noise.jpg', masked_bg_noise_resized)
+    cv2.imwrite('./imgs/new/warp1.jpg', img_warped)
+    cv2.imwrite('./imgs/new/img_warped_resized.jpg', img_warped_resized)
+    cv2.imwrite('./imgs/new/img_ori_resized.jpg',img_ori_resized)
+    cv2.imwrite('./imgs/new/flow_u_resized.jpg', flow_u_remaped_resized)
+    cv2.imwrite('./imgs/new/flow_v_resized.jpg', flow_v_remaped_resized)
+    cv2.imwrite('./imgs/new/masked.jpg', masked_fg_resized)
+    cv2.imwrite('./imgs/new/masked_bg.jpg', masked_bg_resized)
+    cv2.imwrite('./imgs/new/I1_warp.jpg', I_1_warped_rsz)
+    cv2.imwrite('./imgs/new/I2_warp.jpg', I_2_warped_rsz)
+    cv2.imwrite('./imgs/new/I3_warp.jpg', I_3_warped_rsz)
+    cv2.imwrite('./imgs/new/I4_warp.jpg', I_4_warped_rsz)
+    cv2.imwrite('./imgs/new/I_bg_1_warp.jpg', I_bg_1_warp)
+    cv2.imwrite('./imgs/new/I_bg_2_warp.jpg', I_bg_2_warp)
+    cv2.imwrite('./imgs/new/I_bg_3_warp.jpg', I_bg_3_warp)
+    cv2.imwrite('./imgs/new/I_bg_4_warp.jpg', I_bg_4_warp)
+    cv2.imwrite('./imgs/new/masked_noise.jpg', masked_noise)
+    cv2.imwrite('./imgs/new/masked_bg_noise.jpg', masked_bg_noise_resized)
+    cv2.imwrite('./imgs/new/bg_warped.jpg', bg_warped)
     for i in range(7):
-        cv2.imwrite('./imgs/old/'+str(i)+'.jpg', list_of_resized_ims[i])
+        cv2.imwrite('./imgs/new/'+str(i)+'.jpg', list_of_resized_ims[i])
