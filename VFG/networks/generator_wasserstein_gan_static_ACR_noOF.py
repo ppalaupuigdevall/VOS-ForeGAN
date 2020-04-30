@@ -159,7 +159,7 @@ class GeneratorB_static_ACR(NetworkBase):
         if(self.t < self.T -2):
             self.last_features = self.reductor(features)
         self.t = self.t + 1
-        Ib_next = att_mask * (Ib_prev_masked) + (1-att_mask)*color_mask # Whole background cuda0
+        Ib_next = att_mask * (Ib_prev_masked) + (1-att_mask)*color_mask
         return Ib_next
 
 

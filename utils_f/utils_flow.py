@@ -49,8 +49,8 @@ def warp_flow(img, flow):
     flow = -flow
     flow[:,:,0] += np.arange(w)
     flow[:,:,1] += np.arange(h)[:,np.newaxis]
-    print(flow.max())
-    res = cv2.remap(img, np.float32(flow), None, cv2.INTER_LINEAR)
+    
+    res = cv2.remap(img, flow, None, cv2.INTER_LINEAR)
     return res
 
 

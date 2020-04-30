@@ -115,13 +115,13 @@ class DavisDataset(data.Dataset):
                 mask = cv2.imread(os.path.join(self.mask_dir, cat, self.masks_by_cat[cat][0]))
                 masked_img = cv2.bitwise_and(img, mask)
                 masked_img_ori = masked_img.copy()
-                
+                mask_resized = resize_img(mask, self.resolution)
                 masked_img = resize_img(masked_img, self.resolution)
                 masked_img = self.transform_img(masked_img)
 
                 mask_bg = cv2.bitwise_not(mask)
                 masked_img_bg = cv2.bitwise_and(img, mask_bg)
-                noise = np.random.normal(0,1,img.shape) *255 - 127
+                noise = np.random.uniform(0,255,img.shape)
                 noise = np.uint8(noise)
                 masked_noise = cv2.bitwise_and(mask, noise)
                 masked_img_bg = masked_img_bg + masked_noise
@@ -161,6 +161,7 @@ class DavisDataset(data.Dataset):
         sample["warped_imgs"] = warped_imgs
         sample["mask_f"] = masked_img
         sample["mask_b"] = masked_img_bg
+        sample["mask"] = self.transform_flow(mask_resized) # Mask goes from 0 to 1 so we just apply ToTensor() transform
         
         return sample
 
@@ -219,14 +220,17 @@ def extract_bg_patches(first_fg, first_bg, batch_size = 5):
 
     
 if __name__ == '__main__':
-    d = DavisDataset('./VFG/options/configs.json')
-    dl = data.DataLoader(d, batch_size=5)
+    d = DavisDataset('./VFG/options/configs.json', T=3,OF_dir='/data/Ponc/DAVIS/OpticalFlows/')
+    dl = data.DataLoader(d,batch_size=5)
     bat = next(iter(dl))
     # print(bat.keys())
     T = d.T
     import torch
     import torch.nn.functional as F
     extract_bg_patches(bat['mask_f'], bat['imgs'][0])
+    print(bat['mask_f'].size())
+    print(torch.min(bat['mask_f']))
+
     # for t in range(T):
         # print("Fmask")
         # print(bat['mask_f'].size())

@@ -65,6 +65,7 @@ class Train:
             if i_epoch%10 == 0:
                 self._display_visualizer_train(self._iteracio)
                 self._last_display_time = time.time()
+                self._opt.lambda_rec = self._opt.lambda_rec * 2.5
             
     def _display_visualizer_train(self, iteracio):
         self._tb_visualizer.display_current_results(self._model.get_imgs(), iteracio)

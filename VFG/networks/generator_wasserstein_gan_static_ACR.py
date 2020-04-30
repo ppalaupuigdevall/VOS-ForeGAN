@@ -81,7 +81,7 @@ class GeneratorF_static_ACR(NetworkBase):
         fgmask = self.fgmask_conv(features)
         fgmask = self.satsig(30*fgmask)
         If_next_masked = fgmask * If_next_masked + (1-fgmask) * If_next_masked
-
+        
         return  If_next_masked, fgmask
 
 
@@ -118,11 +118,7 @@ class GeneratorB_static_ACR(NetworkBase):
             curr_dim = curr_dim // 2
 
         self.main = nn.Sequential(*layers)
-        self.lafeat = None
-        def hook_function(m,i,o):
-            self.lafeat = o
-            
-        self.main[-1].register_forward_hook(hook_function)
+    
         
         # Prepare temporal skip-connections
         last_layer_dim = curr_dim
@@ -135,29 +131,14 @@ class GeneratorB_static_ACR(NetworkBase):
         layers_att.append(nn.Conv2d(last_layer_dim, 1, kernel_size=7, stride=1, padding=3, bias=False))
         layers_att.append(nn.Sigmoid())
         self.attention_reg_packs = nn.Sequential(*layers_att)
-        layers_reductor = []
-        layers_reductor.append(nn.Conv2d(last_layer_dim, int(last_layer_dim/self.factor), kernel_size=3, stride=1, padding=1, bias=False))
-        layers_reductor.append(nn.Tanh())
-        self.reductor = nn.Sequential(*layers_reductor) 
 
-        self.fgmask_conv = nn.Conv2d(64,1,3,1,1,bias=False)
-        self.satsig = nn.Sigmoid()
-        self.reset_params()
-
-    def reset_params(self):
-        self.last_features = torch.zeros(64,224,416).cuda()
-        self.t = 0
 
     def forward(self, Ib_prev_masked): 
     
         x = Ib_prev_masked
         features = self.main(x)
-        features = self.last_features + features
         color_mask = self.img_reg_packs(features)
         att_mask = self.attention_reg_packs(features)
-        if(self.t < self.T -2):
-            self.last_features = self.reductor(features)
-        self.t = self.t + 1
         Ib_next = att_mask * (Ib_prev_masked) + (1-att_mask)*color_mask # Whole background cuda0
         return Ib_next
 
