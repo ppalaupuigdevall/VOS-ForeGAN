@@ -34,7 +34,7 @@ class TrainOptions(BaseOptions):
         # Lambdas for losses
         self._parser.add_argument('--lambda_Df_prob', type=float, default=1, help='lambda for real/fake discriminator loss')
         self._parser.add_argument('--lambda_Db_prob', type=float, default=0.1, help='lambda for real/fake discriminator loss')
-        self._parser.add_argument('--lambda_rec', type=float, default=0.00001, help='lambda reconstruction loss')
+        self._parser.add_argument('--lambda_rec', type=float, default=0.001, help='lambda reconstruction loss')
         self._parser.add_argument('--lambda_Df_gp', type=float, default=1, help='lambda gradient penalty loss')
         self._parser.add_argument('--lambda_Db_gp', type=float, default=0.1, help='lambda gradient penalty loss')
 

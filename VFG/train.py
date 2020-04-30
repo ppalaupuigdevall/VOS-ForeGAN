@@ -41,9 +41,7 @@ class Train:
             if(i_epoch % 100 == 0):
                 self._model.save(i_epoch)
                 print('saving the model at the end of epoch %d' % (i_epoch))
-            if(i_epoch%10==0):
-                self._opt.lambda_rec = self._opt.lambda_rec * 2.5
-                print(self._opt.lambda_rec)
+            
             # update learning rate
             if i_epoch > self._opt.nepochs_no_decay:
                 self._model.update_learning_rate()
