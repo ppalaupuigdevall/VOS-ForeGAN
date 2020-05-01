@@ -11,11 +11,16 @@ import torch.nn.functional as F
 from data.dataset_davis import tensor2im
 import cv2
 
-class ForestGANpureRNN(BaseModel):
+class ForestGANpureRNN_1(BaseModel):
+    """
+    This variant of ForestGANpureRNN is based on:
+    - Gf with optical flow same as ForestGANpureRNN_0
+    - Bg is not recurrent, it operates on a single image, requires a minimum performance of Gf to have good masks.
+    """
     def __init__(self, opt):
         
         super(ForestGANpureRNN, self).__init__(opt)
-        self._name = 'forestgan_pure_rnn'
+        self._name = 'forestgan_pure_rnn_1'
         self._opt = opt
         self._T = opt.T
 
@@ -227,7 +232,6 @@ class ForestGANpureRNN(BaseModel):
             
             # train G
             self._Gf.reset_params()
-            # self._Gb.reset_params()
             
             # if train_generator:
             if(train_generator):
@@ -239,7 +243,6 @@ class ForestGANpureRNN(BaseModel):
                 self._optimizer_Gf.step()
                 self._optimizer_Gb.step()
                 self._Gf.reset_params()
-                # self._Gb.reset_params()
                 self._print_losses()
 
 
