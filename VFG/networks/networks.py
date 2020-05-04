@@ -20,13 +20,18 @@ class NetworksFactory:
             from networks.discriminator_wasserstein_gan_patchgan import Discriminator
             network = Discriminator(*args, **kwargs)
         elif network_name == 'generator_wasserstein_gan_b_static_ACR':
-            from networks.generator_wasserstein_gan_static_ACR import GeneratorB_static_ACR
+            from networks.generator_wasserstein_gan import GeneratorB_static_ACR
             network = GeneratorB_static_ACR(*args, **kwargs)
         elif network_name == 'generator_wasserstein_gan_f_static_ACR':
-            from networks.generator_wasserstein_gan_static_ACR import GeneratorF_static_ACR
+            from networks.generator_wasserstein_gan import GeneratorF_static_ACR
             network = GeneratorF_static_ACR(*args, **kwargs)
+
+        elif network_name == 'generator_wasserstein_gan_b_static_ACR_single_img':
+            from networks.generator_wasserstein_gan import GeneratorB_static_ACR_single_img
+            network = GeneratorB_static_ACR_single_img(*args, **kwargs)
+
         elif network_name == 'generator_wasserstein_gan_f_static_ACR_noOF':
-            from networks.generator_wasserstein_gan_static_ACR_noOF import GeneratorF_static_ACR_noOF
+            from networks.generator_wasserstein_gan import GeneratorF_static_ACR_noOF
             network = GeneratorF_static_ACR_noOF(*args, **kwargs)
         
 

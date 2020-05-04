@@ -19,6 +19,9 @@ class ModelsFactory:
         elif model_name == 'forestgan_pure_rnn_noof':
             from models.forestgan_pure_rnn_noOF import ForestGANpureRNNnoOF
             model = ForestGANpureRNNnoOF(*args, **kwargs)
+        elif model_name == 'train_gb':
+            from models.train_only_bg import TrainGB
+            model = TrainGB(*args, **kwargs)
         else:
             raise ValueError("Model %s not recognized." % model_name)
 
@@ -90,7 +93,7 @@ class BaseModel(object):
     def _load_optimizer(self, optimizer, optimizer_label, epoch_label):
         load_filename = 'opt_epoch_%s_id_%s.pth' % (epoch_label, optimizer_label)
         load_path = os.path.join(self._save_dir, load_filename)
-        load_path = os.path.join('/data/Ponc/VOS-ForeGAN/experiment_13/',load_filename)
+        # load_path = os.path.join('/data/Ponc/VOS-ForeGAN/experiment_13/',load_filename)
         assert os.path.exists(
             load_path), 'Weights file not found. ' % load_path
 
@@ -106,7 +109,7 @@ class BaseModel(object):
     def _load_network(self, network, network_label, epoch_label):
         load_filename = 'net_epoch_%s_id_%s.pth' % (epoch_label, network_label)
         load_path = os.path.join(self._save_dir, load_filename)
-        load_path = os.path.join('/data/Ponc/VOS-ForeGAN/experiment_13/',load_filename)
+        # load_path = os.path.join('/data/Ponc/VOS-ForeGAN/experiment_13/',load_filename)
         assert os.path.exists(
             load_path), 'Weights file not found. Have you trained a model!? We are not providing one' % load_path
 

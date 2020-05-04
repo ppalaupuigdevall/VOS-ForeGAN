@@ -38,9 +38,9 @@ def remap_values(values, xmin, xmax, ymin, ymax):
 resolutions = {0:(140,260), 1:(175,325), 2:(224,416), 3:(280, 520)}
 desired_shape = resolutions[2]
 
-img_dir = '/data/Ponc/DAVIS/JPEGImages/480p/rollerblade/'
-flo_dir = '/data/Ponc/DAVIS/newFlows/rollerblade/'
-mask_dir = '/data/Ponc/DAVIS/Annotations/480p/rollerblade/'
+img_dir = '/data/Ponc/DAVIS/JPEGImages/480p/camel/'
+flo_dir = '/data/Ponc/DAVIS/newFlows/camel/'
+mask_dir = '/data/Ponc/DAVIS/Annotations/480p/camel/'
 
 img_list = sorted(os.listdir(img_dir))
 
@@ -49,12 +49,23 @@ flo_name = '00000.npy'
 mask_name = '00000.png'
 
 
-flow = np.load(os.path.join(flo_dir, flo_name))
-print(flow.shape)
+# flow = np.load(os.path.join(flo_dir, flo_name))
+
 img = cv2.imread(os.path.join(img_dir, img_name))
 mask = cv2.imread(os.path.join(mask_dir, mask_name))
 mask_bg = cv2.bitwise_not(mask)
 
+mask_uni = mask[:,:,0]
+new_img = img.copy()
+for i in range(img.shape[0]):
+    idxs = np.where(mask_uni[i,:]==255)[0]
+    if(len(idxs)>0):
+        print(idxs)
+        num_idxs = len(idxs)
+        new_img[i,idxs[0:num_idxs//2],:] = img[i,idxs[0]-3,:]
+        new_img[i, idxs[num_idxs//2 +1 :], :] = img[i, idxs[-1]+3,:]
+
+cv2.imwrite('./imgs/new/new_img.jpg', new_img) 
 img_warped = warp_flow(img, flow)
 masked_fg = cv2.bitwise_and(img, mask)
 noise = np.random.normal(0,1,masked_fg.shape) *255 - 127
@@ -102,7 +113,7 @@ img_warped_resized = resize_img(img_warped,desired_shape)
 flow_u_remaped_resized = resize_gray_img(flow_u_remaped, desired_shape)
 flow_v_remaped_resized = resize_gray_img(flow_v_remaped, desired_shape)
 masked_bg_noise_resized = resize_img(masked_bg_noise,desired_shape)
-display, save = False, True
+display, save = False, False
 
 list_of_resized_ims = []
 for i in range(7):

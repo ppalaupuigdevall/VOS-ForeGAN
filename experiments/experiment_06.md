@@ -13,4 +13,7 @@ Problems of this approach:
 - There is a little bug that needs to be solved
 
  ### **_Results_**
-
+| Nets\Model | ForestGAN  |    ForestGAN_RNN_0    | extra_ch | recurrent | ForestGAN_RNN_1                  | extra_ch | recurrent |
+|------------|------------|:---------------------:|----------|-----------|----------------------------------|----------|-----------|
+| Gf         | GeneratorF | GeneratorF_static_ACR | 2        | Yes       | GeneratorF_static_ACR            | 2        | Yes       |
+| GB         | GeneratorB | GeneratorF_static_ACR | 3        | Yes       | GeneratorB_static_ACR_single_img | 3        | No        |

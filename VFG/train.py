@@ -62,7 +62,7 @@ class Train:
             self._total_steps += self._opt.batch_size
             epoch_iter += self._opt.batch_size
             # display visualizer
-            if i_epoch%10 == 0:
+            if i_epoch%40 == 0:
                 self._display_visualizer_train(self._iteracio)
                 self._last_display_time = time.time()
                 

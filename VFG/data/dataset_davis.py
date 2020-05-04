@@ -119,13 +119,25 @@ class DavisDataset(data.Dataset):
                 masked_img = resize_img(masked_img, self.resolution)
                 masked_img = self.transform_img(masked_img)
 
+
                 mask_bg = cv2.bitwise_not(mask)
                 masked_img_bg = cv2.bitwise_and(img, mask_bg)
-                noise = np.random.uniform(0,255,img.shape)
-                noise = np.uint8(noise)
-                masked_noise = cv2.bitwise_and(mask, noise)
-                masked_img_bg = masked_img_bg + masked_noise
-                masked_img_bg = resize_img(masked_img_bg, self.resolution)
+                # noise = np.random.uniform(0,255,img.shape)
+                # noise = np.uint8(noise)
+                # masked_noise = cv2.bitwise_and(mask, noise)
+                # masked_img_bg = masked_img_bg + masked_noise
+
+                mask_uni = mask[:,:,0]
+                new_img = img.copy()
+                for i in range(img.shape[0]):
+                    idxs = np.where(mask_uni[i,:]==255)[0]
+                    if(len(idxs)>0):
+                        num_idxs = len(idxs)
+                        new_img[i,idxs[0:num_idxs//2],:] = img[i,idxs[0]-3,:]
+                        new_img[i, idxs[num_idxs//2 +1 :], :] = img[i, idxs[-1]+3,:]
+
+
+                masked_img_bg = resize_img(new_img, self.resolution)
                 masked_img_bg = self.transform_img(masked_img_bg)
 
 
