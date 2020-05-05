@@ -62,14 +62,20 @@ class Train:
             self._total_steps += self._opt.batch_size
             epoch_iter += self._opt.batch_size
             # display visualizer
-            if i_epoch%40 == 0:
-                self._display_visualizer_train(self._iteracio)
+
+            if i_epoch%3 == 0:
+                self._display_visualizer_scalars_train(self._iteracio)
+                self._last_display_time = time.time()
+            
+            if i_epoch%25 == 0:
+                self._display_visualizer_imgs_train(self._iteracio)
                 self._last_display_time = time.time()
                 
             
-    def _display_visualizer_train(self, iteracio):
-        self._tb_visualizer.display_current_results(self._model.get_imgs(), iteracio)
+    def _display_visualizer_scalars_train(self, iteracio):
         self._tb_visualizer.plot_scalars(self._model.get_losses(), iteracio)
+    def _display_visualizer_imgs_train(self, iteracio):
+        self._tb_visualizer.display_current_results(self._model.get_imgs(), iteracio)
 
 if __name__ == "__main__":
     Train()

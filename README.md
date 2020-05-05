@@ -17,10 +17,9 @@ Results in experiments folder
  - [x] (Difficult) Why part of the generator is not in the GPU?
  - [x] Create mask from sigmoid saturated sigmoid( alpha * (x  + (1-eps) ) )
  - [x] Remove OF from input
- - [ ] Create visualizations
- - [ ] Make DatasetDavis for instant t
--  [ ] Clean generate_random_samples
-
+ - [x] Create visualizations
+ - [x] Clean generate_random_samples
+ - [ ] Share weights between masks and fgs
 ### Setup
 
 ```
