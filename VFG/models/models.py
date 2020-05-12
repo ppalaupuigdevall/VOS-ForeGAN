@@ -19,6 +19,9 @@ class ModelsFactory:
         elif model_name == 'forestgan_rnn_v02':
             from models.forestgan_rnn_v02 import ForestGANRNN_v02
             model = ForestGANRNN_v02(*args, **kwargs)
+        elif model_name == 'forestgan_rnn_v03':
+            from models.forestgan_rnn_v03 import ForestGANRNN_v03
+            model = ForestGANRNN_v03(*args, **kwargs)
         elif model_name == 'forestgan_pure_rnn_noof':
             from models.forestgan_pure_rnn_noOF import ForestGANpureRNNnoOF
             model = ForestGANpureRNNnoOF(*args, **kwargs)

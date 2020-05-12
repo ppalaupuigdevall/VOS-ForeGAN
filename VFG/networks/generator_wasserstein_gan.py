@@ -174,8 +174,7 @@ class GeneratorF_static_ACR(NetworkBase):
         self.last_features = torch.zeros(64,224,416).cuda()
         self.t = 0
         
-    def forward(self, If_prev_masked, OFprev2next, If_next_warped): 
-        
+    def forward(self, If_prev_masked, OFprev2next): 
         x = torch.cat([If_prev_masked, OFprev2next], dim=1)
         features = self.main(x)
         features_ = self.last_features + features
@@ -184,12 +183,10 @@ class GeneratorF_static_ACR(NetworkBase):
         if(self.t<self.T-1):
             self.last_features = self.reductor(features_)
         self.t = self.t + 1
-        
-        If_next_masked = att_mask * If_prev_masked + (1-att_mask)*color_mask 
-        fgmask = self.fgmask_conv(features)
-        fgmask = self.satsig(30*fgmask)
-        If_next_masked = fgmask * If_next_masked + (1-fgmask) * If_next_masked
-        
+        If_next_masked = att_mask * If_prev_masked + (1-att_mask)*color_mask
+        fgmask = self.fgmask_conv(features_)
+        fgmask = self.satsig(2.0*fgmask)
+        If_next_masked = fgmask * If_next_masked + (1-fgmask) * -1.0 *torch.ones_like(If_next_masked).cuda()
         return  If_next_masked, fgmask
 
 

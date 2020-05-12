@@ -302,7 +302,7 @@ class ForestGANpureRNN_1(BaseModel):
         with torch.no_grad():
             for t in range(T-1):
                 self._curr_OFs = self._OFs[t].cuda()
-                self._generate_fake_samples(t)
+                # self._generate_fake_samples(t)
                 Inext_fake, Inext_fake_fg, Inext_fake_bg, mask_next_fg = self._generate_fake_samples_test(t)
                 self._curr_f = Inext_fake_fg 
                 self._curr_b = Inext_fake_bg

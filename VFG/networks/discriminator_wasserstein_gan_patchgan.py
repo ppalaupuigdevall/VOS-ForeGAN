@@ -49,7 +49,7 @@ class Discriminator_M(NetworkBase):
     """
     def __init__(self, conv_dim=64, repeat_num=4):
         super(Discriminator_M, self).__init__()
-        self._name = 'discriminator_wasserstein_gan'
+        self._name = 'discriminator_wasserstein_gan_M'
 
         layers = []
         layers.append(nn.Conv2d(3, conv_dim, kernel_size=4, stride=2, padding=1))
@@ -79,6 +79,7 @@ class Discriminator_M(NetworkBase):
             h = self.conv2(h)
             out_real = self.conv3(h)
         else:
+            x = x.expand(1,3,224,416)
             # is mask
             h = self.main(x)
             h = self.conv1(h)

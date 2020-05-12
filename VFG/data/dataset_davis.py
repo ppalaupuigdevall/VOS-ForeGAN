@@ -9,6 +9,7 @@ from utils_f.utils_flow import warp_flow
 from utils_f.utils_flow import draw_flow
 from utils_f.utils_flow import readFlow
 import math
+import torch
 def tensor2im(img, imtype=np.uint8, unnormalize=True, idx=0, nrows=None):
     # select a sample or create grid if img is a batch
     if len(img.shape) == 4:
@@ -88,7 +89,6 @@ class DavisDataset(data.Dataset):
     
 
     def create_transform(self):
-        """NOTE: mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]"""
         transforms_list_img = [
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.5, 0.5, 0.5],\
@@ -98,6 +98,10 @@ class DavisDataset(data.Dataset):
 
         self.transform_img = transforms.Compose(transforms_list_img)
         self.transform_flow = transforms.ToTensor()
+        self.geom_transforms = transforms.RandomApply([ 
+            transforms.RandomAffine(5,(0.0,0.02),(0.75,1.25)), transforms.RandomHorizontalFlip(0.5)
+
+        ], p=0.45)
 
     def __getitem__(self, idx):
         cat = self.categories[idx]
@@ -119,14 +123,9 @@ class DavisDataset(data.Dataset):
                 masked_img = resize_img(masked_img, self.resolution)
                 masked_img = self.transform_img(masked_img)
 
-
                 mask_bg = cv2.bitwise_not(mask)
                 masked_img_bg = cv2.bitwise_and(img, mask_bg)
-                # noise = np.random.uniform(0,255,img.shape)
-                # noise = np.uint8(noise)
-                # masked_noise = cv2.bitwise_and(mask, noise)
-                # masked_img_bg = masked_img_bg + masked_noise
-
+                
                 mask_uni = mask[:,:,0]
                 new_img = img.copy()
                 for i in range(img.shape[0]):
@@ -136,10 +135,8 @@ class DavisDataset(data.Dataset):
                         new_img[i,idxs[0:num_idxs//2],:] = img[i,idxs[0]-3,:]
                         new_img[i, idxs[num_idxs//2 +1 :], :] = img[i, idxs[-1]+3,:]
 
-
                 masked_img_bg = resize_img(new_img, self.resolution)
                 masked_img_bg = self.transform_img(masked_img_bg)
-
 
             elif(i<=self.T-1):
                 flow = readFlow(OFs_paths[i])
@@ -168,13 +165,14 @@ class DavisDataset(data.Dataset):
             imgs.append(img)
 
         sample = {}
-        sample["imgs"] = imgs
-        sample["OFs"] = OFs
-        sample["warped_imgs"] = warped_imgs
-        sample["mask_f"] = masked_img
-        sample["mask_b"] = masked_img_bg
+        sample["imgs"] = imgs # range -1,1
+        sample["OFs"] = OFs # range 0,1
+        sample["warped_imgs"] = warped_imgs # range -1,1
+        sample["mask_f"] = masked_img # range -1,1
+        sample["mask_b"] = masked_img_bg # range -1,1
         sample["mask"] = self.transform_flow(mask_resized) # Mask goes from 0 to 1 so we just apply ToTensor() transform
-        
+        sample["transformed_mask"] = self.transform_flow(self.geom_transforms(resize_img(mask, self.resolution)))
+
         return sample
 
     def __len__(self):

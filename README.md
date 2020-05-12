@@ -19,7 +19,16 @@ Results in experiments folder
  - [x] Remove OF from input
  - [x] Create visualizations
  - [x] Clean generate_random_samples
- - [ ] Share weights between masks and fgs
+ - [x] Share weights between masks and fgs
+ - [x] Generate OFs for the rest of davis
+ - [x] Flip masks and apply transformations in real masks for Df
+ - [ ] Decrease lambda_rec in training the next time
+ - [ ] Implement validation code
+ - [x] Split training val
+ - [ ] Define metrics for training and val
+ - [x] See experiment_v1 and experiment_v03 at the same epochs same videos in a grid 1x2
+ - [ ] When everything else is done, train noof
+
 ### Setup
 
 ```
@@ -33,10 +42,6 @@ export PYTHONPATH=$PWD:/home/ppalau/VOS-ForeGAN/VFG/
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-    
-    
-        
-        
         {
             "name": "Python: Current File",
             "type": "python",
@@ -62,3 +67,13 @@ export PYTHONPATH=$PWD:/home/ppalau/VOS-ForeGAN/VFG/
     ]
 }
 ```
+
+
+Talk with octavia (11 maig):
+
+ - Good news the sampling based background impoatinting is better for the bg
+ - The Discriminator of the mask does not really help, but it has to be reviewed
+ - Therefore, to better judge new approaches, davis metrics will be implemented. Jacard index (iou de masks), Contour index, Temporal stability, Inception
+ - In addition, now we train with 30 videos of davis sets training and validation (20)
+ - Comentar a veure si li sembla be: Podriem fer que evalues les coses a 2T o 3T frames vista
+ - Comentar fg gris que ha de canviar-se a foreground negre
