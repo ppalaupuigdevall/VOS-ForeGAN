@@ -2,24 +2,26 @@ import time
 from options.train_options import TrainOptions
 from data.dataset_davis import DavisDataset
 from models.models import ModelsFactory
-# from utils.tb_visualizer import TBVisualizer
 from collections import OrderedDict
 import os
 import torch.utils.data as data
-from utils.visualizer import Visualizer
+from utils.visualizer import Visualizer, Visualizerv8
+from utils.metrics_utils import db_eval_iou, db_eval_boundary
 
 class Train:
     def __init__(self):
         self._opt = TrainOptions().parse()
 
         self._dataset_train = DavisDataset(self._opt, self._opt.T, self._opt.OF_dir)
-        self._data_loader_train = data.DataLoader(self._dataset_train, self._opt.batch_size, drop_last=True, shuffle=True)
+        # self._dataset_val = ValDavisDataset(self._opt, self._opt.T, self._opt.OF_dir)
+        self._data_loader_train = data.DataLoader(self._dataset_train, self._opt.batch_size, drop_last=True, shuffle=True,num_workers=4)
         self._dataset_train_size = len(self._dataset_train)
         print('# Train videos = %d' % self._dataset_train_size)
 
         self._model = ModelsFactory.get_by_name(self._opt.model, self._opt)
         
         self._tb_visualizer = Visualizer(self._opt)
+        # self._tb_visualizer = Visualizerv8(self._opt)
 
         self._train()
 
@@ -38,10 +40,10 @@ class Train:
                   (i_epoch, self._opt.nepochs_no_decay + self._opt.nepochs_decay, time_epoch,
                    time_epoch / 60, time_epoch / 3600))
 
-            if(i_epoch % 100 == 0):
+            if(i_epoch % 150 == 0):
                 self._model.save(i_epoch)
                 print('saving the model at the end of epoch %d' % (i_epoch))
-
+            
             # update learning rate
             if i_epoch > self._opt.nepochs_no_decay:
                 self._model.update_learning_rate()
@@ -62,13 +64,41 @@ class Train:
             self._total_steps += self._opt.batch_size
             epoch_iter += self._opt.batch_size
             # display visualizer
-            if i_epoch%10 == 0:
-                self._display_visualizer_train(self._iteracio)
+
+            if i_epoch%3 == 0:
+                self._display_visualizer_scalars_train(self._iteracio)
                 self._last_display_time = time.time()
             
-    def _display_visualizer_train(self, iteracio):
-        self._tb_visualizer.display_current_results(self._model.get_imgs(), iteracio)
+            if i_epoch%5 == 0:
+                self._display_visualizer_imgs_train(self._iteracio)
+                self._last_display_time = time.time()
+                
+    def _validation(self, iteracio):
+        J_val_set = 0.0
+        Boundary = 0.0
+        for i_val_batch, val_batch in enumerate(self._data_loader_train):
+            jbatch = 0.0
+            boundary_batch = 0.0
+            self._model.set_input(val_batch)
+            fgs, bgs, fakes, masks = self._model.forward(self._opt.T)
+            
+            for t in self._opt.T-1:
+                jbatch = jbatch + db_eval_iou(val_batch['gt_mask'][t], tensor2im(masks[t]))
+                boundary_batch = boundary_batch + db_eval_boundary(tensor2im(masks[t]), val_batch['gt_mask'][t])
+            J_val_set = J_val_set + jbatch/(self._opt.T - 1)
+            Boundary = Boundary + boundary_batch/(self._opt.T - 1)
+        print("########### VALIDATION in T = %d ############"%(self._opt.T))
+        print("Jaccard index J = %.2f"%(J_val_set))
+        print("Boundary F score = %.2f"%(Boundary))
+
+
+
+    
+
+    def _display_visualizer_scalars_train(self, iteracio):
         self._tb_visualizer.plot_scalars(self._model.get_losses(), iteracio)
+    def _display_visualizer_imgs_train(self, iteracio):
+        self._tb_visualizer.display_current_results(self._model.get_imgs(), iteracio)
 
 if __name__ == "__main__":
     Train()
