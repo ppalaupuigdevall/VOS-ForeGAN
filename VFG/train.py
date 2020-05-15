@@ -65,11 +65,11 @@ class Train:
             epoch_iter += self._opt.batch_size
             # display visualizer
 
-            if i_epoch%3 == 0:
+            if i_epoch%self._opt.save_scalars == 0:
                 self._display_visualizer_scalars_train(self._iteracio)
                 self._last_display_time = time.time()
             
-            if i_epoch%5 == 0:
+            if i_epoch%self._opt.save_imgs == 0:
                 self._display_visualizer_imgs_train(self._iteracio)
                 self._last_display_time = time.time()
                 

@@ -22,10 +22,11 @@ class BaseOptions():
         self._parser.add_argument('--name',             type=str,   default='experiment_noof',                        help='name of the experiment. It decides where to store samples and models')
         self._parser.add_argument('--checkpoints_dir',  type=str,   default='/data/Ponc/VOS-ForeGAN/',              help='models are saved here')
         self._parser.add_argument('--save_path',        type=str,   default='/data/Ponc/VOS-ForeGAN/',              help='TensorboardX directory')
-
+        self._parser.add_argument('--save_scalars',     type=int,   default=5, help = 'Visualizer saves scalars every save scalars epochs')
+        self._parser.add_argument('--save_imgs',        type=int,   default=25, help = 'Visualizer saves scalars every save scalars epochs')
         
         # Foreground/Background patches extractions
-        self._parser.add_argument('--num_patches', type=int, default = 10, help='number of patches/image to be compared')
+        self._parser.add_argument('--num_patches',      type=int,   default = 10, help='number of patches/image to be compared')
         self._parser.add_argument('--kh', type=int, default = 60, help='number of patches to be compared')
         self._parser.add_argument('--kw', type=int, default = 112, help='number of patches to be compared')
         self._parser.add_argument('--stride_h', type=int, default=3, help='stride patches')
