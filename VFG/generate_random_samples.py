@@ -6,6 +6,7 @@ import torch.utils.data as data
 import cv2
 from imutils import build_montages
 import numpy as np
+
 class Test:
     def __init__(self):
         self._opt = TestOptions().parse()
@@ -21,13 +22,12 @@ class Test:
 
         def rgb2bgr(img):
             return cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-
-        print(self._dataset_test.imgs_by_cat)
+        
         cat = self._dataset_test.categories[0]
         imgs = self._dataset_test.imgs_by_cat[cat]
+        
         for t in range(self._opt.T-1):
-            img_name = os.path.join(self._dataset_test.img_dir,cat, imgs[t+1])
-            print(img_name)
+            img_name = os.path.join(self._dataset_test.img_dir,cat, imgs[t+1])    
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'fg_'+ "{:02d}".format(t) + '.jpeg'), rgb2bgr(tensor2im(fgs[t])))
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'bg_'+ "{:02d}".format(t) + '.jpeg'), rgb2bgr(tensor2im(bgs[t])))
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'fake_'+ "{:02d}".format(t) + '.jpeg'), rgb2bgr(tensor2im(fakes[t])))
@@ -42,7 +42,7 @@ class Test:
             im=cv2.drawContours(im, contours, -1, (0, 0, 0), 1)
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'mask_'+ "{:02d}".format(t) + '.jpeg'), im)
 
-    # def _visualize(self, fgs, bgs, fakes, masks):
+    
 
 
 if __name__ == "__main__":

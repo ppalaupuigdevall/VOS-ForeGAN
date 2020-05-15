@@ -57,45 +57,33 @@ def remap_values(values, xmin, xmax, ymin, ymax):
     values = np.uint8(m * values + n)
     return values
 
-#https:///GANimation/issues/22 (utilitzen 128 x 128)
 
 resolutions = {0:(140,260), 1:(175,325), 2:(224,416), 3:(280, 520)}
 desired_shape = resolutions[2]
 categ = 'mallard-fly'
 img_dir = '/data/Ponc/DAVIS/JPEGImages/480p/training/' + categ +'/'
-flo_dir = '/data/Ponc/DAVIS/OpticalFlows/training/'+categ+'/'
-mask_dir = '/data/Ponc/DAVIS/Annotations/480p/'+categ+'/'
 
 img_list = sorted(os.listdir(img_dir))
 
 img_name = '00000.jpg'
-flo_name = '000000.flo'
-mask_name = '00000.png'
 
-flow = readFlow(os.path.join(flo_dir, flo_name))
 img = cv2.imread(os.path.join(img_dir, img_name))
-img_warped = warp_flow(img, flow)
-mask = cv2.imread(os.path.join(mask_dir, mask_name))
-mask_bg = cv2.bitwise_not(mask)
-print(mask.shape)
-masked_img = cv2.bitwise_and(img, mask)
 
 geom_transforms = [
     transforms.RandomAffine(5,(0,0.02),(0.75,1.25)),transforms.RandomHorizontalFlip(0.5) 
 ]
-to_grayscale = transforms.Grayscale()
 to_tensor = transforms.ToTensor()
-norma=transforms.Normalize(mean=0.5,\
-                                 std=0.5)
+norma=transforms.Normalize(mean=[0.5,0.5,0.5],\
+                                 std=[0.5,0.5,0.5])
 transform_img = transforms.RandomApply(geom_transforms, p=0.45)
-gray=to_grayscale(resize_img(img, (224,416)))
+cj = transforms.ColorJitter(0.3,0,0,0.5)
+gray=cj(resize_img(img, (224,416)))
 
 gray_tensor = norma(to_tensor(gray))
 
-print(tensor_mask.size()) # [3,224,416]
-tensor_mask = norma(to_tensor(transform_img(resize_img(mask,(224,416)))))
-tensor_mask = tensor_mask + (1-tensor_mask)*-1
 
-mask_back = tensor2im(tensor_mask)
-cv2.imwrite('./mask_ori.png', mask)
-cv2.imwrite('./transformed_mask.png', mask_back)
+img = tensor2im(gray_tensor)
+# cv2.imwrite('./img_ori.png', img)
+cv2.imwrite('./img.png', img)
+cv2.imshow('i',img)
+cv2.waitKey(2000)

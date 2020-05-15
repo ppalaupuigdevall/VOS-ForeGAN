@@ -265,10 +265,10 @@ class GeneratorF_static_ACR_noOF(NetworkBase):
         self.t = self.t + 1
 
         If_next_masked = att_mask * If_prev_masked + (1-att_mask)*color_mask 
-        fgmask = self.fgmask_conv(features)
-        fgmask = self.satsig(30*fgmask)
+        fgmask = self.fgmask_conv(features_)
+        fgmask = self.satsig(10.0*fgmask)
         
-        If_next_masked = fgmask * If_next_masked + (1-fgmask) * If_next_masked
+        If_next_masked = fgmask * If_next_masked + (1-fgmask) * -1.0 *torch.ones_like(If_next_masked).cuda()
         
         return  If_next_masked, fgmask
 

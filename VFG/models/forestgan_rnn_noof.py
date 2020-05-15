@@ -11,14 +11,14 @@ import torch.nn.functional as F
 from data.dataset_davis import tensor2im
 import cv2
 
-class ForestGANRNN_v03(BaseModel):
+class ForestGANRNN_noof(BaseModel):
     def __init__(self, opt):
         
-        super(ForestGANRNN_v03, self).__init__(opt)
-        self._name = 'forestgan_rnn_v03'
+        super(ForestGANRNN_noof, self).__init__(opt)
+        self._name = 'forestgan_rnn_noof'
         self._opt = opt
         self._T = opt.T
-        self._extra_ch_Gf = 2
+        self._extra_ch_Gf = 3
         self._extra_ch_Gb = 0
 
         # create networks
@@ -32,6 +32,7 @@ class ForestGANRNN_v03(BaseModel):
         # load networks and optimizers
         if not self._is_train or self._opt.load_epoch > 0:
             self.load()
+        self._load_bg() # NOTE: CAREFUL
         # init
         self._init_losses()
 
@@ -44,6 +45,7 @@ class ForestGANRNN_v03(BaseModel):
         self._real_bg_patches = self._extract_real_patches(self._opt, self._first_fg, self._first_bg) # NOTE TODO This could be done for each t
         self._real_mask = sample['mask']
         self._transformed_mask = sample['transformed_mask']
+        self._gray_imgs = sample['gray_imgs']
         self._move_inputs_to_gpu(0)
 
         kh, kw, stride_h, stride_w = self._opt.kh, self._opt.kw, self._opt.stride_h, self._opt.stride_w
@@ -62,6 +64,7 @@ class ForestGANRNN_v03(BaseModel):
             self._visual_bgs = []
             self._visual_fakes = []
             self._next_frame_imgs_ori = self._imgs[t+1].cuda()
+            self._next_frame_gray = self._gray_imgs[t+1].cuda()
             self._curr_OFs = self._OFs[t].cuda()
             self._curr_f = self._first_fg.cuda()
             self._curr_b = self._first_bg.cuda()
@@ -72,7 +75,8 @@ class ForestGANRNN_v03(BaseModel):
             self._transformed_mask = self._transformed_mask.cuda()
         else:
             self._curr_OFs = self._OFs[t].cuda()
-            self._next_frame_imgs_ori = self._imgs[t+1].cuda()        
+            self._next_frame_imgs_ori = self._imgs[t+1].cuda()     
+            self._next_frame_gray = self._gray_imgs[t+1].cuda()   
 
     def _extract_real_patches(self, opt, first_fg, first_bg):
         
@@ -112,7 +116,7 @@ class ForestGANRNN_v03(BaseModel):
                 image_patches[b, n, :, :, :] = first_bg[b, :, P1 : P1 + kh, P2:P2+kw]
 
         return image_patches
-
+        
     def _extract_img_patches(self,x, ch=3, height=224, width=416, kh=60, kw=112,dh=3, dw=3):
         patches = x.unfold(2, kh, dh).unfold(3, kw, dw) # 2,3,9,9,60,112
         r = np.random.randint(0,patches.size()[2]*patches.size()[3], self._opt.num_patches)
@@ -157,7 +161,7 @@ class ForestGANRNN_v03(BaseModel):
         self._Db.cuda()
 
     def _create_generator_f(self):
-        return NetworksFactory.get_by_name('generator_wasserstein_gan_f_static_ACR', c_dim=self._extra_ch_Gf, T=self._opt.T)
+        return NetworksFactory.get_by_name('generator_wasserstein_gan_f_static_ACR_noOF', c_dim=self._extra_ch_Gf, T=self._opt.T)
 
     def _create_generator_b(self):
         return NetworksFactory.get_by_name('generator_wasserstein_gan_b_static_ACR', c_dim=self._extra_ch_Gb, T=self._opt.T)
@@ -231,21 +235,19 @@ class ForestGANRNN_v03(BaseModel):
             self._loss_db_gp = torch.cuda.FloatTensor([0])
 
             for t in range(self._T - 1):
-                self._loss_df_gp = self._loss_df_gp + self._gradient_penalty_Df(real_samples_fg[t], fake_samples_fg[t], is_fg = True)* self._opt.lambda_Df_gp
-                self._loss_df_gp = self._loss_df_gp + self._gradient_penalty_Df(real_samples_mask[t], fake_samples_mask[t], is_fg = False)* self._opt.lambda_Df_gp
-                self._loss_db_gp = self._loss_db_gp + self._gradient_penalty_Db(real_samples_bg[t], fake_samples_bg[t])* self._opt.lambda_Db_gp               
+                self._loss_df_gp = self._loss_df_gp + self._gradient_penalty_Df(real_samples_fg[t], fake_samples_fg[t], is_fg = True) * self._opt.lambda_Df_gp
+                self._loss_df_gp = self._loss_df_gp + self._gradient_penalty_Df(real_samples_mask[t], fake_samples_mask[t], is_fg = False) * self._opt.lambda_Df_gp
+                self._loss_db_gp = self._loss_db_gp + self._gradient_penalty_Db(real_samples_bg[t], fake_samples_bg[t]) * self._opt.lambda_Db_gp
 
             loss_D_gp = self._loss_df_gp + self._loss_db_gp
             loss_D_gp.backward()
             self._optimizer_Df.step()
             self._optimizer_Db.step()
 
-            
             # train G
             self._Gf.reset_params()
             self._Gb.reset_params()
             
-            # if train_generator:
             if(train_generator):
                 
                 loss_G = self._forward_G()
@@ -295,7 +297,7 @@ class ForestGANRNN_v03(BaseModel):
             
 
     def _generate_fake_samples(self, t):
-        Inext_fake_fg, mask_next_fg = self._Gf(self._curr_f, self._curr_OFs)
+        Inext_fake_fg, mask_next_fg = self._Gf(self._curr_f, self._next_frame_gray)
         Inext_fake_bg = self._Gb(self._curr_b)
         Inext_fake = (1 - mask_next_fg) * Inext_fake_bg + Inext_fake_fg
         self._visual_masks.append(mask_next_fg)
@@ -306,7 +308,7 @@ class ForestGANRNN_v03(BaseModel):
 
     
     def _generate_fake_samples_test(self, t):
-        Inext_fake_fg, mask_next_fg = self._Gf(self._curr_f, self._curr_OFs)
+        Inext_fake_fg, mask_next_fg = self._Gf(self._curr_f, self._next_frame_gray)
         Inext_fake_bg = self._Gb(self._curr_b)
         Inext_fake = (1 - mask_next_fg) * Inext_fake_bg + Inext_fake_fg
         return Inext_fake, Inext_fake_fg, Inext_fake_bg, mask_next_fg
@@ -381,8 +383,10 @@ class ForestGANRNN_v03(BaseModel):
             real_samples_bg.append(paches_bg_real)
             d_real_bg = self._Db(paches_bg_real)
             self._loss_db_real = self._loss_db_real + self._compute_loss_D(d_real_bg, True) * self._opt.lambda_Db_prob
+            
             patches_bg_fake = self._extract_img_patches_mask_sampled(Inext_fake_bg)
             # patches_bg_fake = self._extract_img_patches(Inext_fake_bg)
+
             fake_samples_bg.append(patches_bg_fake)
             d_fake_bg = self._Db(patches_bg_fake)
             self._loss_db_fake = self._loss_db_fake + self._compute_loss_D(d_fake_bg, False) * self._opt.lambda_Db_prob
@@ -439,7 +443,6 @@ class ForestGANRNN_v03(BaseModel):
     def _compute_loss_D(self, estim, is_real):
         return -torch.mean(estim) if is_real else torch.mean(estim)
 
-
     def get_losses(self):
         losses = {}
         
@@ -479,6 +482,7 @@ class ForestGANRNN_v03(BaseModel):
         print("Df(fake) - Df(real) = ", "{:.2f}".format(discr_f) )
         discr_b = self._loss_db_fake.item() + self._loss_db_real.item() + self._loss_db_gp.item()
         print("Db(fake) - Db(real) = ", "{:.2f}".format(discr_b) )
+
 
     def update_learning_rate(self):
         # updated learning rate G
@@ -522,7 +526,7 @@ class ForestGANRNN_v03(BaseModel):
 
     def load(self):
         load_epoch = self._opt.load_epoch
-
+        load_epoch = '1050'
         # load G
         self._load_network(self._Gf, 'Gf', load_epoch)
         self._load_network(self._Gb, 'Gb', load_epoch)
@@ -536,3 +540,15 @@ class ForestGANRNN_v03(BaseModel):
             self._load_optimizer(self._optimizer_Gb, 'Gb', load_epoch)
             self._load_optimizer(self._optimizer_Df, 'Df', load_epoch)
             self._load_optimizer(self._optimizer_Db, 'Db', load_epoch)
+    def _load_bg(self):
+        load_epoch = self._opt.load_epoch
+
+        # load G
+        # self._load_network(self._Gf, 'Gf', load_epoch)
+        self._load_network(self._Gb, 'Gb', load_epoch)
+        
+        self._load_network(self._Db,'Db', load_epoch)
+        
+        self._load_optimizer(self._optimizer_Gb, 'Gb', load_epoch)
+        # self._load_optimizer(self._optimizer_Df, 'Df', load_epoch)
+        self._load_optimizer(self._optimizer_Db, 'Db', load_epoch)

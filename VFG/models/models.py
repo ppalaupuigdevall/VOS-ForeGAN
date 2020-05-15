@@ -22,12 +22,15 @@ class ModelsFactory:
         elif model_name == 'forestgan_rnn_v03':
             from models.forestgan_rnn_v03 import ForestGANRNN_v03
             model = ForestGANRNN_v03(*args, **kwargs)
-        elif model_name == 'forestgan_pure_rnn_noof':
-            from models.forestgan_pure_rnn_noOF import ForestGANpureRNNnoOF
-            model = ForestGANpureRNNnoOF(*args, **kwargs)
+        elif model_name == 'forestgan_rnn_noof':
+            from models.forestgan_rnn_noof import ForestGANRNN_noof
+            model = ForestGANRNN_noof(*args, **kwargs)
         elif model_name == 'train_gb':
             from models.train_only_bg import TrainGB
             model = TrainGB(*args, **kwargs)
+        elif model_name == 'forestgan_rnn_v8':
+            from models.forestgan_rnn_v8 import ForestGANRNN_v8
+            model = ForestGANRNN_v8(*args, **kwargs)
         else:
             raise ValueError("Model %s not recognized." % model_name)
 
@@ -97,13 +100,17 @@ class BaseModel(object):
         torch.save(optimizer.state_dict(), save_path)
 
     def _load_optimizer(self, optimizer, optimizer_label, epoch_label):
-        load_filename = 'opt_epoch_%s_id_%s.pth' % (epoch_label, optimizer_label)
-        load_path = os.path.join(self._save_dir, load_filename)
+        # load_filename = 'opt_epoch_%s_id_%s.pth' % (epoch_label, optimizer_label)
+       
+        # load_path = os.path.join(self._save_dir, load_filename)
+        load_path=None
         # load_path = os.path.join('/data/Ponc/VOS-ForeGAN/experiment_13/',load_filename)
-        assert os.path.exists(
-            load_path), 'Weights file not found. ' % load_path
+        if((('Gb' in optimizer_label) or ('Db' in optimizer_label))):
+            load_filename = 'opt_epoch_1050_id_'+str(optimizer_label)+'.pth'
+            load_path = os.path.join('/data/Ponc/VOS-ForeGAN/experiment_v031/',load_filename)
+        assert os.path.exists(load_path), 'Weights file not found. ' % load_path
 
-        optimizer.load_state_dict(torch.load(load_path))
+        optimizer.load_state_dict(torch.load(load_path, map_location=lambda storage, loc: storage))
         print('loaded optimizer: %s' % load_path)
 
     def _save_network(self, network, network_label, epoch_label):
@@ -113,11 +120,17 @@ class BaseModel(object):
         print('saved net: %s' % save_path)
 
     def _load_network(self, network, network_label, epoch_label):
-        load_filename = 'net_epoch_%s_id_%s.pth' % (epoch_label, network_label)
-        load_path = os.path.join(self._save_dir, load_filename)
+        # load_filename = 'net_epoch_%s_id_%s.pth' % (epoch_label, network_label)
+        # load_path = os.path.join(self._save_dir, load_filename)
+        load_path=None
         # load_path = os.path.join('/data/Ponc/VOS-ForeGAN/experiment_13/',load_filename)
-        assert os.path.exists(
-            load_path), 'Weights file not found. Have you trained a model!? We are not providing one' % load_path
+        if((('Gb' in network_label) or ('Db' in network_label))):
+            print(network_label)
+            load_filename = 'net_epoch_1050_id_'+str(network_label)+'.pth'
+            print(load_filename)
+            load_path = os.path.join('/data/Ponc/VOS-ForeGAN/experiment_v031/',load_filename)
+            print(load_path)
+        assert os.path.exists(load_path), 'Weights file not found. Have you trained a model!? We are not providing one' % load_path
 
         network.load_state_dict(torch.load(load_path, map_location=lambda storage, loc: storage))
         print('loaded net: %s' % load_path)
