@@ -11,11 +11,11 @@ import torch.nn.functional as F
 from data.dataset_davis import tensor2im
 import cv2
 
-class ForestGANRNN_v03(BaseModel):
+class ForestGANRNN_v0(BaseModel):
     def __init__(self, opt):
         
-        super(ForestGANRNN_v03, self).__init__(opt)
-        self._name = 'forestgan_rnn_v03'
+        super(ForestGANRNN_v0, self).__init__(opt)
+        self._name = 'forestgan_rnn_v0'
         self._opt = opt
         self._T = opt.T
         self._extra_ch_Gf = 2
@@ -220,7 +220,7 @@ class ForestGANRNN_v03(BaseModel):
     def optimize_parameters(self, train_generator=True, save_imgs = False):
         if self._is_train:
 
-            loss_D, real_samples_fg, fake_samples_fg, real_samples_bg, fake_samples_bg, real_samples_mask, fake_samples_mask = self._forward_D()
+            loss_D, real_samples_fg, fake_samples_fg, real_samples_bg, fake_samples_bg = self._forward_D()
             self._optimizer_Df.zero_grad()
             self._optimizer_Db.zero_grad()
             loss_D.backward()
@@ -232,7 +232,6 @@ class ForestGANRNN_v03(BaseModel):
 
             for t in range(self._T - 1):
                 self._loss_df_gp = self._loss_df_gp + self._gradient_penalty_Df(real_samples_fg[t], fake_samples_fg[t], is_fg = True)* self._opt.lambda_Df_gp
-                self._loss_df_gp = self._loss_df_gp + self._gradient_penalty_Df(real_samples_mask[t], fake_samples_mask[t], is_fg = False)* self._opt.lambda_Df_gp
                 self._loss_db_gp = self._loss_db_gp + self._gradient_penalty_Db(real_samples_bg[t], fake_samples_bg[t])* self._opt.lambda_Db_gp               
 
             loss_D_gp = self._loss_df_gp + self._loss_db_gp
@@ -277,13 +276,8 @@ class ForestGANRNN_v03(BaseModel):
             d_fake_fg = self._Df(Inext_fake_fg, is_fg=True)
             self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, False) * self._opt.lambda_Gf_prob_fg
             
-            # Fake masks
-            d_fake_mask = self._Df(mask_next_fg, is_fg=False)
-            self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, False) * self._opt.lambda_Gf_prob_mask
-            
             # Fake bgs
-            patches_Inext_bg = self._extract_img_patches_mask_sampled(Inext_fake_bg)
-            # patches_Inext_bg = self._extract_img_patches(Inext_fake_bg)
+            patches_Inext_bg = self._extract_img_patches(Inext_fake_bg)
 
             d_fake_bg = self._Db(patches_Inext_bg)
             self._loss_g_bg = self._loss_g_bg + self._compute_loss_D(d_fake_bg, False) * self._opt.lambda_Gb_prob
@@ -336,8 +330,6 @@ class ForestGANRNN_v03(BaseModel):
         fake_samples_fg = []
         real_samples_bg = []
         fake_samples_bg = []
-        fake_samples_mask = []
-        real_samples_mask = []
 
         self._loss_df_real = torch.cuda.FloatTensor([0])
         self._loss_df_fake = torch.cuda.FloatTensor([0])
@@ -361,8 +353,7 @@ class ForestGANRNN_v03(BaseModel):
             fake_samples_fg.append(Inext_fake_fg)
 
             mask_next_fg = mask_next_fg.detach()
-            real_samples_mask.append(self._transformed_mask)
-            fake_samples_mask.append(mask_next_fg)
+            
 
             # Df(real_fg) & Df(fake_fg)
             d_real_fg = self._Df(self._first_fg, is_fg=True)
@@ -370,24 +361,18 @@ class ForestGANRNN_v03(BaseModel):
             d_fake_fg = self._Df(Inext_fake_fg, is_fg=True)
             self._loss_df_fake = self._loss_df_fake + self._compute_loss_D(d_fake_fg, False) * self._opt.lambda_Df_prob_fg
 
-            # Df(real_mask) & Df(fake_mask)
-            d_real_mask = self._Df(self._transformed_mask, is_fg=False)
-            self._loss_df_real = self._loss_df_real + self._compute_loss_D(d_real_mask, True) * self._opt.lambda_Df_prob_mask
-            d_fake_mask = self._Df(mask_next_fg, is_fg=False)
-            self._loss_df_fake = self._loss_df_fake + self._compute_loss_D(d_fake_mask, False) * self._opt.lambda_Df_prob_mask
-
             # Db(real_bg_patches) & Db(fake_bg_patches)
             paches_bg_real = self._real_bg_patches.view(-1,3,self._opt.kh, self._opt.kw) 
             real_samples_bg.append(paches_bg_real)
             d_real_bg = self._Db(paches_bg_real)
             self._loss_db_real = self._loss_db_real + self._compute_loss_D(d_real_bg, True) * self._opt.lambda_Db_prob
-            patches_bg_fake = self._extract_img_patches_mask_sampled(Inext_fake_bg)
-            # patches_bg_fake = self._extract_img_patches(Inext_fake_bg)
+            
+            patches_bg_fake = self._extract_img_patches(Inext_fake_bg)
             fake_samples_bg.append(patches_bg_fake)
             d_fake_bg = self._Db(patches_bg_fake)
             self._loss_db_fake = self._loss_db_fake + self._compute_loss_D(d_fake_bg, False) * self._opt.lambda_Db_prob
 
-        return self._loss_df_fake + self._loss_df_real + self._loss_db_fake + self._loss_db_real, real_samples_fg, fake_samples_fg, real_samples_bg, fake_samples_bg, real_samples_mask, fake_samples_mask
+        return self._loss_df_fake + self._loss_df_real + self._loss_db_fake + self._loss_db_real, real_samples_fg, fake_samples_fg, real_samples_bg, fake_samples_bg
 
 
     def _gradient_penalty_Df(self, real_samples, fake_samples, is_fg=True):

@@ -79,7 +79,7 @@ class Discriminator_M(NetworkBase):
             h = self.conv2(h)
             out_real = self.conv3(h)
         else:
-            x = x.expand(1,3,224,416)
+            x = x.expand(3,3,224,416)
             # is mask
             h = self.main(x)
             h = self.conv1(h)
