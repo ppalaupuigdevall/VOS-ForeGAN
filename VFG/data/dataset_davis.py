@@ -99,13 +99,15 @@ class DavisDataset(data.Dataset):
         
         transforms_list_flow = [transforms.ToTensor(), ]
         transforms_list_gray = [transforms.ColorJitter(0.3,0,0,0.5), transforms.ToTensor(),transforms.Normalize(mean=[0.5,0.5,0.5],std=[0.5,0.5,0.5])]
+        geom_transforms_fg = [transforms.ColorJitter(0.3,0.3,0.5,0.05),transforms.RandomAffine(8,(0,0.025),(0.75,1.25)),transforms.RandomHorizontalFlip(0.5)]
         
         self.transform_img = transforms.Compose(transforms_list_img)
         self.transform_flow = transforms.ToTensor()
         if self._noof:
             self.transform_gray = transforms.Compose(transforms_list_gray)
         self.geom_transforms = transforms.RandomApply([ 
-            transforms.RandomAffine(5,(0.0,0.02),(0.75,1.25)), transforms.RandomHorizontalFlip(0.5)], p=0.45)
+            transforms.RandomAffine(8,(0.0,0.02),(0.75,1.25)), transforms.RandomHorizontalFlip(0.5)], p=0.45)
+        self.fg_geom_transforms = transforms.Compose(geom_transforms_fg)
 
     def __getitem__(self, idx):
         cat = self.categories[idx]
@@ -124,8 +126,10 @@ class DavisDataset(data.Dataset):
                 mask = cv2.imread(os.path.join(self.mask_dir, cat, self.masks_by_cat[cat][0]))
                 masked_img = cv2.bitwise_and(img, mask)
                 masked_img_ori = masked_img.copy()
+                
                 mask_resized = resize_img(mask, self.resolution)
                 masked_img = resize_img(masked_img, self.resolution)
+                
                 masked_img = self.transform_img(masked_img)
 
                 mask_bg = cv2.bitwise_not(mask)
@@ -180,6 +184,7 @@ class DavisDataset(data.Dataset):
         sample["mask_b"] = masked_img_bg # range -1,1
         sample["mask"] = self.transform_flow(mask_resized) # Mask goes from 0 to 1 so we just apply ToTensor() transform
         sample["transformed_mask"] = self.transform_flow(self.geom_transforms(resize_img(mask, self.resolution)))
+        sample["transformed_fg"] = self.transform_img(self.fg_geom_transforms(resize_img(masked_img_ori, self.resolution)))
         if self._noof:
             sample['gray_imgs'] = gray_imgs
         return sample

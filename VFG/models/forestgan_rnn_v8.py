@@ -137,8 +137,8 @@ class ForestGANRNN_v8(BaseModel):
             self._loss_df_gp = torch.cuda.FloatTensor([0])
 
             for t in range(self._T - 1):
-                self._loss_df_gp = self._loss_df_gp + self._gradient_penalty_Df(real_samples_fg[t], fake_samples_fg[t], is_fg = True)
-                self._loss_df_gp = self._loss_df_gp + self._gradient_penalty_Df(real_samples_mask[t], fake_samples_mask[t], is_fg = False)
+                self._loss_df_gp = self._loss_df_gp + self._gradient_penalty_Df(real_samples_fg[t], fake_samples_fg[t], is_fg = True)* self._opt.lambda_Df_gp
+                self._loss_df_gp = self._loss_df_gp + self._gradient_penalty_Df(real_samples_mask[t], fake_samples_mask[t], is_fg = False)* self._opt.lambda_Df_gp
 
             loss_D_gp = self._loss_df_gp
             loss_D_gp.backward()
@@ -173,14 +173,17 @@ class ForestGANRNN_v8(BaseModel):
             
             # Fake fgs
             d_fake_fg = self._Df(Inext_fake_fg, is_fg=True)
-            self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, False) 
+            self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, False) * self._opt.lambda_Gf_prob_fg
             
             # Fake masks
             d_fake_mask = self._Df(mask_next_fg, is_fg=False)
-            self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, False)
+            self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, False) * self._opt.lambda_Gf_prob_mask
             
             # Fake images
             self._loss_g_fb_rec = self._loss_g_fb_rec + self._criterion_Gs_rec(self._next_frame_imgs_ori*mask_next_fg + (1-mask_next_fg)*-1.0, Inext_fake_fg) * self._opt.lambda_rec
+
+        
+
 
         return self._loss_g_fb_rec + self._loss_g_fg
             
@@ -247,15 +250,15 @@ class ForestGANRNN_v8(BaseModel):
 
             # Df(real_fg) & Df(fake_fg)
             d_real_fg = self._Df(self._first_fg, is_fg=True)
-            self._loss_df_real = self._loss_df_real + self._compute_loss_D(d_real_fg, True) * self._opt.lambda_Df_prob
+            self._loss_df_real = self._loss_df_real + self._compute_loss_D(d_real_fg, True) * self._opt.lambda_Df_prob_fg
             d_fake_fg = self._Df(Inext_fake_fg, is_fg=True)
-            self._loss_df_fake = self._loss_df_fake + self._compute_loss_D(d_fake_fg, False) * self._opt.lambda_Df_prob
+            self._loss_df_fake = self._loss_df_fake + self._compute_loss_D(d_fake_fg, False) * self._opt.lambda_Df_prob_fg
 
             # Df(real_mask) & Df(fake_mask)
             d_real_mask = self._Df(self._transformed_mask, is_fg=False)
-            self._loss_df_real = self._loss_df_real + self._compute_loss_D(d_real_mask, True) * self._opt.lambda_Df_prob
+            self._loss_df_real = self._loss_df_real + self._compute_loss_D(d_real_mask, True) * self._opt.lambda_Df_prob_mask
             d_fake_mask = self._Df(mask_next_fg, is_fg=False)
-            self._loss_df_fake = self._loss_df_fake + self._compute_loss_D(d_fake_mask, False) * self._opt.lambda_Df_prob
+            self._loss_df_fake = self._loss_df_fake + self._compute_loss_D(d_fake_mask, False) * self._opt.lambda_Df_prob_mask
 
         return self._loss_df_fake + self._loss_df_real, real_samples_fg, fake_samples_fg, real_samples_mask, fake_samples_mask
 
