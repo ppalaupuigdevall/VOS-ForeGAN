@@ -14,7 +14,7 @@ class Train:
 
         self._dataset_train = DavisDataset(self._opt, self._opt.T, self._opt.OF_dir)
         # self._dataset_val = ValDavisDataset(self._opt, self._opt.T, self._opt.OF_dir)
-        self._data_loader_train = data.DataLoader(self._dataset_train, self._opt.batch_size, drop_last=True, shuffle=True,num_workers=4)
+        self._data_loader_train = data.DataLoader(self._dataset_train, self._opt.batch_size, shuffle=True,num_workers=5)
         self._dataset_train_size = len(self._dataset_train)
         print('# Train videos = %d' % self._dataset_train_size)
 
@@ -40,7 +40,7 @@ class Train:
                   (i_epoch, self._opt.nepochs_no_decay + self._opt.nepochs_decay, time_epoch,
                    time_epoch / 60, time_epoch / 3600))
 
-            if(i_epoch % 150 == 0):
+            if(i_epoch % 25 == 0):
                 self._model.save(i_epoch)
                 print('saving the model at the end of epoch %d' % (i_epoch))
             
@@ -64,7 +64,6 @@ class Train:
             self._total_steps += self._opt.batch_size
             epoch_iter += self._opt.batch_size
             # display visualizer
-
             if i_epoch%self._opt.save_scalars == 0:
                 self._display_visualizer_scalars_train(self._iteracio)
                 self._last_display_time = time.time()
@@ -72,6 +71,7 @@ class Train:
             if i_epoch%self._opt.save_imgs == 0:
                 self._display_visualizer_imgs_train(self._iteracio)
                 self._last_display_time = time.time()
+           
                 
     def _validation(self, iteracio):
         J_val_set = 0.0
