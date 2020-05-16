@@ -11,11 +11,11 @@ import torch.nn.functional as F
 from data.dataset_davis import tensor2im
 import cv2
 
-class ForestGANRNN_v03(BaseModel):
+class ForestGANRNN_v1(BaseModel):
     def __init__(self, opt):
         
-        super(ForestGANRNN_v03, self).__init__(opt)
-        self._name = 'forestgan_rnn_v03'
+        super(ForestGANRNN_v1, self).__init__(opt)
+        self._name = 'forestgan_rnn_v1'
         self._opt = opt
         self._T = opt.T
         self._extra_ch_Gf = 2
@@ -44,6 +44,7 @@ class ForestGANRNN_v03(BaseModel):
         self._real_bg_patches = self._extract_real_patches(self._opt, self._first_fg, self._first_bg) # NOTE TODO This could be done for each t
         self._real_mask = sample['mask']
         self._transformed_mask = sample['transformed_mask']
+        self._transformed_fg = sample['transformed_fg']
         self._move_inputs_to_gpu(0)
 
         kh, kw, stride_h, stride_w = self._opt.kh, self._opt.kw, self._opt.stride_h, self._opt.stride_w
@@ -70,6 +71,7 @@ class ForestGANRNN_v03(BaseModel):
             self._real_bg_patches = self._real_bg_patches.cuda()
             self._real_mask = self._real_mask.cuda()
             self._transformed_mask = self._transformed_mask.cuda()
+            self._transformed_fg = self._transformed_fg.cuda()
         else:
             self._curr_OFs = self._OFs[t].cuda()
             self._next_frame_imgs_ori = self._imgs[t+1].cuda()        
@@ -283,7 +285,6 @@ class ForestGANRNN_v03(BaseModel):
             
             # Fake bgs
             patches_Inext_bg = self._extract_img_patches_mask_sampled(Inext_fake_bg)
-            # patches_Inext_bg = self._extract_img_patches(Inext_fake_bg)
 
             d_fake_bg = self._Db(patches_Inext_bg)
             self._loss_g_bg = self._loss_g_bg + self._compute_loss_D(d_fake_bg, False) * self._opt.lambda_Gb_prob
@@ -357,7 +358,7 @@ class ForestGANRNN_v03(BaseModel):
             Inext_fake_fg = Inext_fake_fg.detach()
             self._curr_b = Inext_fake_bg
             self._curr_f = Inext_fake_fg
-            real_samples_fg.append(self._first_fg)
+            real_samples_fg.append(self._transformed_fg)
             fake_samples_fg.append(Inext_fake_fg)
 
             mask_next_fg = mask_next_fg.detach()
@@ -365,7 +366,7 @@ class ForestGANRNN_v03(BaseModel):
             fake_samples_mask.append(mask_next_fg)
 
             # Df(real_fg) & Df(fake_fg)
-            d_real_fg = self._Df(self._first_fg, is_fg=True)
+            d_real_fg = self._Df(self._transformed_fg, is_fg=True)
             self._loss_df_real = self._loss_df_real + self._compute_loss_D(d_real_fg, True) * self._opt.lambda_Df_prob_fg
             d_fake_fg = self._Df(Inext_fake_fg, is_fg=True)
             self._loss_df_fake = self._loss_df_fake + self._compute_loss_D(d_fake_fg, False) * self._opt.lambda_Df_prob_fg
@@ -382,7 +383,6 @@ class ForestGANRNN_v03(BaseModel):
             d_real_bg = self._Db(paches_bg_real)
             self._loss_db_real = self._loss_db_real + self._compute_loss_D(d_real_bg, True) * self._opt.lambda_Db_prob
             patches_bg_fake = self._extract_img_patches_mask_sampled(Inext_fake_bg)
-            # patches_bg_fake = self._extract_img_patches(Inext_fake_bg)
             fake_samples_bg.append(patches_bg_fake)
             d_fake_bg = self._Db(patches_bg_fake)
             self._loss_db_fake = self._loss_db_fake + self._compute_loss_D(d_fake_bg, False) * self._opt.lambda_Db_prob

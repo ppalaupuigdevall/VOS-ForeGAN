@@ -61,7 +61,9 @@ def remap_values(values, xmin, xmax, ymin, ymax):
 
 resolutions = {0:(140,260), 1:(175,325), 2:(224,416), 3:(280, 520)}
 desired_shape = resolutions[2]
-categ = 'hike'
+train = ['bear', 'bmx-bumps','boat','breakdance-flare','bus','car-turn','dance-jump','dog-agility','drift-turn','elephant','flamingo','hike','hockey','horsejump-low','kite-walk','lucia','mallard-fly','mallard-water','motocross-bumps','motorbike','paragliding','rhino','rollerblade','scooter-gray','soccerball','stroller','surf','swing','tennis','train']
+r = np.random.randint(0,len(train),1)
+categ = train[int(r)]
 img_dir = '/data/Ponc/DAVIS/JPEGImages/480p/training/' + categ +'/'
 flo_dir = '/data/Ponc/DAVIS/OpticalFlows/training/'+categ+'/'
 mask_dir = '/data/Ponc/DAVIS/Annotations/480p/'+categ+'/'
@@ -81,13 +83,13 @@ print(mask.shape)
 masked_img = cv2.bitwise_and(img, mask)
 
 geom_transforms = [
-    transforms.RandomAffine(10,(0,0.025),(0.75,1.25)),transforms.RandomHorizontalFlip(0.5) 
+    transforms.ColorJitter(0.3,0.3,0.5,0.05),transforms.RandomAffine(10,(0,0.025),(0.75,1.25)),transforms.RandomHorizontalFlip(0.5) 
 ]
 to_grayscale = transforms.Grayscale()
 to_tensor = transforms.ToTensor()
 norma=transforms.Normalize(mean=[0.5,0.5,0.5],\
                                  std=[0.5,0.5,0.5])
-transform_img = transforms.RandomApply(geom_transforms, p=0.5)
+transform_img = transforms.RandomApply(geom_transforms, p=0.9)
 gray=to_grayscale(resize_img(img, (224,416)))
 
 gray_tensor = norma(to_tensor(gray))
