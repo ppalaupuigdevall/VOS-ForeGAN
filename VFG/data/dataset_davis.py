@@ -110,7 +110,10 @@ class DavisDataset(data.Dataset):
         self.fg_geom_transforms = transforms.Compose(geom_transforms_fg)
 
     def __getitem__(self, idx):
+        
         cat = self.categories[idx]
+        self._cat = cat
+        
         imgs_paths = self.imgs_by_cat[cat][0:self.T]
         imgs_paths = [os.path.join(self.img_dir, cat, x) for x in imgs_paths]
         OFs_paths = self.OFs_by_cat[cat][0:self.T]

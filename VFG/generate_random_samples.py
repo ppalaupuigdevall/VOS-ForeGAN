@@ -19,11 +19,12 @@ class Test:
         for i_test_batch, test_batch in enumerate(self._data_loader_test):
             self._model.set_input(test_batch)
             fgs, bgs, fakes, masks = self._model.forward(self._opt.T)
-
+            break
         def rgb2bgr(img):
             return cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         
         cat = self._dataset_test.categories[0]
+        cat = self._dataset_test._cat
         imgs = self._dataset_test.imgs_by_cat[cat]
         
         for t in range(self._opt.T-1):
@@ -33,12 +34,12 @@ class Test:
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'fake_'+ "{:02d}".format(t) + '.jpeg'), rgb2bgr(tensor2im(fakes[t])))
             im = resize_img_cv2(cv2.imread(img_name), self._opt.resolution)
             mask = np.reshape(tensor2im(masks[t]), self._opt.resolution) 
-            ret, bin_mask = cv2.threshold(mask, 130, 255, cv2.THRESH_BINARY)
+            ret, bin_mask = cv2.threshold(mask, 215, 255, cv2.THRESH_BINARY)
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'mask_debug_'+ "{:02d}".format(t) + '.jpeg'), bin_mask)
             # Draw contours:
             image, contours, hierarchy = cv2.findContours(bin_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
             im[:, :, 0] = (bin_mask > 0) * 255 + (bin_mask == 0) * im[:, :, 0]
-            cnt = contours[4]
+            cnt = contours[0]
             im=cv2.drawContours(im, contours, -1, (0, 0, 0), 1)
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'mask_'+ "{:02d}".format(t) + '.jpeg'), im)
 

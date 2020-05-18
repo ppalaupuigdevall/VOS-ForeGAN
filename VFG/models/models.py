@@ -10,9 +10,9 @@ class ModelsFactory:
     def get_by_name(model_name, *args, **kwargs):
         model = None
 
-        if model_name == 'forestgan':
-            from models.forestgan import ForestGAN
-            model = ForestGAN(*args, **kwargs)
+        if model_name == 'forestgan_convlstm_v0':
+            from models.forestgan_convlstm_v0 import ForestGAN_ConvLSTM_v0
+            model = ForestGAN_ConvLSTM_v0(*args, **kwargs)
         elif model_name == 'forestgan_rnn_v0':
             from models.forestgan_rnn_v0 import ForestGANRNN_v0
             model = ForestGANRNN_v0(*args, **kwargs)
@@ -120,16 +120,16 @@ class BaseModel(object):
         print('saved net: %s' % save_path)
 
     def _load_network(self, network, network_label, epoch_label):
-        # load_filename = 'net_epoch_%s_id_%s.pth' % (epoch_label, network_label)
-        # load_path = os.path.join(self._save_dir, load_filename)
-        load_path=None
+        load_filename = 'net_epoch_%s_id_%s.pth' % (epoch_label, network_label)
+        load_path = os.path.join(self._save_dir, load_filename)
+        # load_path=None
         # load_path = os.path.join('/data/Ponc/VOS-ForeGAN/experiment_13/',load_filename)
-        if((('Gb' in network_label) or ('Db' in network_label))):
-            print(network_label)
-            load_filename = 'net_epoch_1050_id_'+str(network_label)+'.pth'
-            print(load_filename)
-            load_path = os.path.join('/data/Ponc/VOS-ForeGAN/experiment_v031/',load_filename)
-            print(load_path)
+        # if((('Gb' in network_label) or ('Db' in network_label))):
+        #     print(network_label)
+        #     load_filename = 'net_epoch_1050_id_'+str(network_label)+'.pth'
+        #     print(load_filename)
+        #     load_path = os.path.join('/data/Ponc/VOS-ForeGAN/experiment_v031/',load_filename)
+        #     print(load_path)
         assert os.path.exists(load_path), 'Weights file not found. Have you trained a model!? We are not providing one' % load_path
 
         network.load_state_dict(torch.load(load_path, map_location=lambda storage, loc: storage))

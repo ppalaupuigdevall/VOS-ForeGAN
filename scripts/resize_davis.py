@@ -43,7 +43,6 @@ flo_dir = '/data/Ponc/DAVIS/OpticalFlows/bear/'
 img_name = '00000.jpg'
 flo_name = '000000.flo'
 
-flow = readFlow(os.path.join(flo_dir, flo_name))
 img = cv2.imread(os.path.join(img_dir, img_name))
 img_warped = warp_flow(img, flow)
 
@@ -57,7 +56,16 @@ desired_shape = img_warped.shape[:2]
 desired_shape = resolutions[1]
 img_ori_resized = resize_img(img, desired_shape)
 img_warped_resized = resize_img(img_warped,desired_shape)
-flow_u_remaped_resized = resize_gray_img(flow_u_remaped, desired_shape)
+for i in range(len(os.lisdir(img_dir))):
+    flow = readFlow(os.path.join(flo_dir, flo_name))
+    flow_u_remaped_resized = resize_gray_img(flow_u_remaped, desired_shape)
+    u = flow[:,:,0]
+    v = flow[:,:,1]
+    flow_u_remaped = remap_values(u, -20, 20, 0, 255)
+    flow_v_remaped = remap_values(v, -20, 20, 0, 255)
+    cv2.imwrite('./imgs/flow_u_resized.jpg', flow_u_remaped_resized)
+    cv2.imwrite('./imgs/flow_v_resized.jpg', flow_v_remaped_resized)
+
 
 display, save = False, False
 

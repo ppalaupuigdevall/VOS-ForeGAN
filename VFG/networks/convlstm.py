@@ -2,18 +2,19 @@ import torch
 from torch import nn
 import torch.nn.functional as f
 from torch.autograd import Variable
-
-class ConvLSTMCell(nn.Module):
+from networks.networks import NetworkBase, NetworksFactory
+from networks.generator_wasserstein_gan import ResidualBlock
+class CanvLSTMCell(nn.Module):
     """
     Generate a convolutional LSTM cell
     """
 
-    def __init__(self, input_size=64, hidden_size=64, kernel_size, padding):
+    def __init__(self, input_size=64, hidden_size=64, kernel_size=3, padding=1):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.Gates = nn.Conv2d(input_size + hidden_size, 4 * hidden_size, kernel_size, padding)
-
+        self.Gates = nn.Conv2d(input_size + hidden_size, 4 * hidden_size, kernel_size, stride=1, padding=padding)
+    
     def forward(self, input_, prev_state):
         # get batch and spatial sizes
         batch_size = input_.data.size()[0]
@@ -23,8 +24,8 @@ class ConvLSTMCell(nn.Module):
         if prev_state is None:
             state_size = [batch_size, self.hidden_size] + list(spatial_size)
             prev_state = (
-                Variable(torch.zeros(state_size)),
-                Variable(torch.zeros(state_size))
+                Variable(torch.zeros(state_size).cuda()),
+                Variable(torch.zeros(state_size).cuda())
             )
 
         prev_hidden, prev_cell = prev_state
@@ -33,7 +34,6 @@ class ConvLSTMCell(nn.Module):
         gates = self.Gates(stacked_inputs)
         # chunk across channel dimension
         in_gate, remember_gate, out_gate, cell_gate = gates.chunk(4, 1)
-       
         # apply sigmoid non linearity
         in_gate = f.sigmoid(in_gate)
         remember_gate = f.sigmoid(remember_gate)
@@ -52,8 +52,8 @@ class ConvLSTMCell(nn.Module):
 class GeneratorF_convLSTM(NetworkBase):
     """Generator. Encoder-Decoder Architecture."""
     def __init__(self, c_dim, T, conv_dim=64, repeat_num=6):
-        super(GeneratorF_static_ACR, self).__init__()
-        self._name = 'generator_wasserstein_gan_f_convLSTM'
+        super(GeneratorF_convLSTM, self).__init__()
+        self._name = 'generator_wasserstein_gan_f_convlstm'
         self.T = T
         
         layers = []
@@ -81,7 +81,7 @@ class GeneratorF_convLSTM(NetworkBase):
             curr_dim = curr_dim // 2
 
         self.main = nn.Sequential(*layers)
-        self.conv_lstm = ConvLSTMCell(64,64,3,1)
+        self.conv_lstm = CanvLSTMCell(64,64,3,1)
         
         last_layer_dim = curr_dim
         layers_img = []
@@ -98,7 +98,6 @@ class GeneratorF_convLSTM(NetworkBase):
         self.reset_params()
 
     def reset_params(self):
-        self.conv_lstm.init_hidden()
         self.prev_state = None
         
     def forward(self, If_prev_masked, OFprev2next): 
@@ -117,11 +116,11 @@ class GeneratorF_convLSTM(NetworkBase):
 
 
 
-class GeneratorB_static_ACR(NetworkBase):
+class GeneratorB_convLSTM(NetworkBase):
     """Generator. Encoder-Decoder Architecture."""
     def __init__(self, c_dim, T, conv_dim=64, repeat_num=6):
-        super(GeneratorB_static_ACR, self).__init__()
-        self._name = 'generator_wasserstein_gan_b_static_ACR'
+        super(GeneratorB_convLSTM, self).__init__()
+        self._name = 'generator_wasserstein_gan_b_convlstm'
         self.T = T
         self.t = 0
         self.factor = 1
@@ -150,15 +149,9 @@ class GeneratorB_static_ACR(NetworkBase):
             curr_dim = curr_dim // 2
 
         self.main = nn.Sequential(*layers)
-        self.lafeat = None
-        def hook_function(m,i,o):
-            self.lafeat = o
-            
-        self.main[-1].register_forward_hook(hook_function)
+        self.conv_lstm = CanvLSTMCell(64,64,3,1)
         
-        # Prepare temporal skip-connections
         last_layer_dim = curr_dim
-        # 0,1, .. T-1
         layers_img = []
         layers_img.append(nn.Conv2d(last_layer_dim, 3, kernel_size=7, stride=1, padding=3, bias=False))
         layers_img.append(nn.Tanh())
@@ -167,29 +160,23 @@ class GeneratorB_static_ACR(NetworkBase):
         layers_att.append(nn.Conv2d(last_layer_dim, 1, kernel_size=7, stride=1, padding=3, bias=False))
         layers_att.append(nn.Sigmoid())
         self.attention_reg_packs = nn.Sequential(*layers_att)
-        layers_reductor = []
-        layers_reductor.append(nn.Conv2d(last_layer_dim, int(last_layer_dim/self.factor), kernel_size=3, stride=1, padding=1, bias=False))
-        layers_reductor.append(nn.Tanh())
-        self.reductor = nn.Sequential(*layers_reductor) 
 
         self.fgmask_conv = nn.Conv2d(64,1,3,1,1,bias=False)
         self.satsig = nn.Sigmoid()
         self.reset_params()
 
     def reset_params(self):
-        self.last_features = torch.zeros(64,224,416).cuda()
-        self.t = 0
+        self.prev_state = None
 
     def forward(self, Ib_prev_masked): 
     
         x = Ib_prev_masked
         features = self.main(x)
-        features = self.last_features + features
-        color_mask = self.img_reg_packs(features)
-        att_mask = self.attention_reg_packs(features)
-        if(self.t < self.T -2):
-            self.last_features = self.reductor(features)
-        self.t = self.t + 1
+        hidden_, cell_ = self.conv_lstm(features, self.prev_state)
+        self.prev_state = (hidden_, cell_)
+        features_ = hidden_
+        color_mask = self.img_reg_packs(features_)
+        att_mask = self.attention_reg_packs(features_)
         Ib_next = att_mask * (Ib_prev_masked) + (1-att_mask)*color_mask # Whole background cuda0
         return Ib_next
 

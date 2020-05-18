@@ -40,7 +40,12 @@ class NetworksFactory:
         elif network_name == 'generator_wasserstein_gan_f_static_ACR_noOF':
             from networks.generator_wasserstein_gan import GeneratorF_static_ACR_noOF
             network = GeneratorF_static_ACR_noOF(*args, **kwargs)
-        
+        elif network_name == 'generator_wasserstein_gan_f_convlstm':
+            from networks.convlstm import GeneratorF_convLSTM
+            network = GeneratorF_convLSTM(*args, **kwargs)
+        elif network_name == 'generator_wasserstein_gan_b_convlstm':
+            from networks.convlstm import GeneratorB_convLSTM 
+            network = GeneratorB_convLSTM(*args, **kwargs)        
 
         else:
             raise ValueError("Network %s not recognized." % network_name)
@@ -68,6 +73,7 @@ class NetworkBase(nn.Module):
             m.weight.data.normal_(0.0, 0.02)
             if hasattr(m.bias, 'data'):
                 m.bias.data.fill_(0)
+        
         elif classname.find('BatchNorm2d') != -1:
             m.weight.data.normal_(1.0, 0.02)
             m.bias.data.fill_(0)
