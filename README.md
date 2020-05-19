@@ -22,12 +22,12 @@ Results in experiments folder
  - [x] Share weights between masks and fgs
  - [x] Generate OFs for the rest of davis
  - [x] Flip masks and apply transformations in real masks for Df
- - [ ] Decrease lambda_rec in training the next time
- - [ ] Implement validation code
+ - [x] Decrease lambda_rec in training the next time
+ - [x] Implement validation code
  - [x] Split training val
- - [ ] Define metrics for training and val
+ - [x] Define metrics for training and val
  - [x] See experiment_v1 and experiment_v03 at the same epochs same videos in a grid 1x2
- - [ ] When everything else is done, train noof
+ - [x] When everything else is done, train noof
 
 ### Setup
 

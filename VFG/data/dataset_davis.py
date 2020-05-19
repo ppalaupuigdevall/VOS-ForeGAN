@@ -152,10 +152,6 @@ class DavisDataset(data.Dataset):
 
             elif(i<=self.T-1):
                 flow = readFlow(OFs_paths[i])
-            
-                warped_img = warp_flow(masked_img_ori, flow)
-                masked_img_ori = warped_img.copy()
-                warped_img = resize_img(warped_img, self.resolution)
                 u = flow[:,:,0]
                 v = flow[:,:,1]
                 flow_u_remaped = remap_values(u, -20, 20, 0, 255)
@@ -168,9 +164,6 @@ class DavisDataset(data.Dataset):
                 x[:,:,1] = flow_v_remaped
                 x = self.transform_flow(x)
                 OFs.append(x)
-                warped_img = self.transform_img(warped_img)
-                warped_imgs.append(warped_img)
-                
 
             img = resize_img(img, self.resolution)
             if self._noof:
@@ -197,116 +190,105 @@ class DavisDataset(data.Dataset):
 
 
 
-# class ValDavisDataset(data.Dataset):
+class ValDavisDataset(data.Dataset):
     
-#     def __init__(self, conf, T, OF_dir):
-#         super(ValDavisDataset, self).__init__()
+    def __init__(self, conf, T, OF_dir):
+        super(ValDavisDataset, self).__init__()
         
-#         self.img_dir = conf.img_dir
-#         self.OF_dir = OF_dir
-#         self.mask_dir = conf.mask_dir
-#         self.categories = os.listdir(self.OF_dir)
-#         self.num_categories = len(self.categories)
-#         self.imgs_by_cat, self.OFs_by_cat, self.masks_by_cat = {}, {}, {}
-#         for cat in self.categories:
-#             self.imgs_by_cat[cat] = sorted(os.listdir(os.path.join(self.img_dir, cat)))
-#             self.OFs_by_cat[cat] = sorted(os.listdir(os.path.join(self.OF_dir, cat)))
-#             self.masks_by_cat[cat] = sorted(os.listdir(os.path.join(self.mask_dir, cat)))
+        self.img_dir = conf.img_dir
+        self.OF_dir = OF_dir
+        self.mask_dir = conf.mask_dir
+        self.categories = os.listdir(self.OF_dir)
+        self.num_categories = len(self.categories)
+        self.imgs_by_cat, self.OFs_by_cat, self.masks_by_cat = {}, {}, {}
+        for cat in self.categories:
+            self.imgs_by_cat[cat] = sorted(os.listdir(os.path.join(self.img_dir, cat)))
+            self.OFs_by_cat[cat] = sorted(os.listdir(os.path.join(self.OF_dir, cat)))
+            self.masks_by_cat[cat] = sorted(os.listdir(os.path.join(self.mask_dir, cat)))
 
-#         self.resolution = (conf.resolution)
-#         self.T = T
-#         self.create_transform()
+        self.resolution = (conf.resolution)
+        self.T = T
+        self.create_transform()
     
-#     def create_transform(self):
-#         transforms_list_img = [
-#             transforms.ToTensor(),
-#             transforms.Normalize(mean=[0.5, 0.5, 0.5],\
-#                                  std=[0.5, 0.5, 0.5])
-#         ]
-#         transforms_list_flow = [transforms.ToTensor(), ]
+    def create_transform(self):
+        transforms_list_img = [
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.5, 0.5, 0.5],\
+                                 std=[0.5, 0.5, 0.5])
+        ]
+        transforms_list_flow = [transforms.ToTensor(), ]
 
-#         self.transform_img = transforms.Compose(transforms_list_img)
-#         self.transform_flow = transforms.ToTensor()
-#         self.geom_transforms = transforms.RandomApply([ 
-#             transforms.RandomAffine(5,(0.0,0.02),(0.75,1.25)), transforms.RandomHorizontalFlip(0.5)
-#         ], p=0.45)
+        self.transform_img = transforms.Compose(transforms_list_img)
+        self.transform_flow = transforms.ToTensor()
 
-#     def __getitem__(self, idx):
-#         cat = self.categories[idx]
-#         imgs_paths = self.imgs_by_cat[cat][0:self.T]
-#         imgs_paths = [os.path.join(self.img_dir, cat, x) for x in imgs_paths]
-#         OFs_paths = self.OFs_by_cat[cat][0:self.T]
-#         OFs_paths = [os.path.join(self.OF_dir, cat, x) for x in OFs_paths]
+    def __getitem__(self, idx):
+        cat = self.categories[idx]
+        imgs_paths = self.imgs_by_cat[cat][0:self.T]
+        imgs_paths = [os.path.join(self.img_dir, cat, x) for x in imgs_paths]
+        OFs_paths = self.OFs_by_cat[cat][0:self.T]
+        OFs_paths = [os.path.join(self.OF_dir, cat, x) for x in OFs_paths]
 
-#         imgs = []
-#         OFs = []
-#         warped_imgs = []
-#         gt_masks = []
-#         for i in range(self.T):
-#             img = cv2.imread(imgs_paths[i])
-#             if(i==0):
-#                 mask = cv2.imread(os.path.join(self.mask_dir, cat, self.masks_by_cat[cat][0]))
-#                 masked_img = cv2.bitwise_and(img, mask)
-                
-#                 masked_img_ori = masked_img.copy()
-#                 mask_resized = resize_img(mask, self.resolution)
-#                 masked_img = resize_img(masked_img, self.resolution)
-#                 masked_img = self.transform_img(masked_img)
-
-#                 mask_bg = cv2.bitwise_not(mask)
-#                 masked_img_bg = cv2.bitwise_and(img, mask_bg)
-                
-#                 mask_uni = mask[:,:,0]
-#                 new_img = img.copy()
-#                 for i in range(img.shape[0]):
-#                     idxs = np.where(mask_uni[i,:]==255)[0]
-#                     if(len(idxs)>0):
-#                         num_idxs = len(idxs)
-#                         new_img[i,idxs[0:num_idxs//2],:] = img[i,idxs[0]-3,:]
-#                         new_img[i, idxs[num_idxs//2 +1 :], :] = img[i, idxs[-1]+3,:]
-
-#                 masked_img_bg = resize_img(new_img, self.resolution)
-#                 masked_img_bg = self.transform_img(masked_img_bg)
-
-#             elif(i<=self.T-1):
-#                 flow = readFlow(OFs_paths[i])
-            
-#                 warped_img = warp_flow(masked_img_ori, flow)
-#                 masked_img_ori = warped_img.copy()
-#                 warped_img = resize_img(warped_img, self.resolution)
-#                 u = flow[:,:,0]
-#                 v = flow[:,:,1]
-#                 flow_u_remaped = remap_values(u, -20, 20, 0, 255)
-#                 flow_v_remaped = remap_values(v, -20, 20, 0, 255)
-#                 flow_u_remaped = resize_gray_img(flow_u_remaped, self.resolution)
-#                 flow_v_remaped = resize_gray_img(flow_v_remaped, self.resolution)
-#                 joint_flow_shape = (np.array(flow_u_remaped).shape[0], np.array(flow_u_remaped).shape[1], 2)
-#                 x = np.zeros(joint_flow_shape, dtype=np.uint8)
-#                 x[:,:,0] = flow_u_remaped
-#                 x[:,:,1] = flow_v_remaped
-#                 x = self.transform_flow(x)
-#                 OFs.append(x)
-#                 warped_img = self.transform_img(warped_img)
-#                 warped_imgs.append(warped_img)
-            
-
-#             img = resize_img(img, self.resolution)
-#             img = self.transform_img(img)
-#             imgs.append(img)
-
-#         sample = {}
-#         sample["imgs"] = imgs # range -1,1
-#         sample["OFs"] = OFs # range 0,1
-#         sample["warped_imgs"] = warped_imgs # range -1,1
-#         sample["mask_f"] = masked_img # range -1,1
-#         sample["mask_b"] = masked_img_bg # range -1,1
-#         sample["mask"] = self.transform_flow(mask_resized) # Mask goes from 0 to 1 so we just apply ToTensor() transform
-#         sample["transformed_mask"] = self.transform_flow(self.geom_transforms(resize_img(mask, self.resolution)))
+        imgs = []
+        OFs = []
+        gt_masks = []
         
-#         return sample
+        for i in range(self.T):
+            img = cv2.imread(imgs_paths[i])
+            if(i==0):
+                mask = cv2.imread(os.path.join(self.mask_dir, cat, self.masks_by_cat[cat][0]))
+                masked_img = cv2.bitwise_and(img, mask)
+                
+                masked_img_ori = masked_img.copy()
+                mask_resized = resize_img(mask, self.resolution)
+                masked_img = resize_img(masked_img, self.resolution)
+                masked_img = self.transform_img(masked_img)
 
-#     def __len__(self):
-#         return self.num_categories
+                mask_bg = cv2.bitwise_not(mask)
+                masked_img_bg = cv2.bitwise_and(img, mask_bg)
+                
+                mask_uni = mask[:,:,0]
+                new_img = img.copy()
+                for i in range(img.shape[0]):
+                    idxs = np.where(mask_uni[i,:]==255)[0]
+                    if(len(idxs)>0):
+                        num_idxs = len(idxs)
+                        new_img[i,idxs[0:num_idxs//2],:] = img[i,idxs[0]-3,:]
+                        new_img[i, idxs[num_idxs//2 +1 :], :] = img[i, idxs[-1]+3,:]
+
+                masked_img_bg = resize_img(new_img, self.resolution)
+                masked_img_bg = self.transform_img(masked_img_bg)
+
+            elif(i<=self.T-1):
+                flow = readFlow(OFs_paths[i])
+            
+                u = flow[:,:,0]
+                v = flow[:,:,1]
+                flow_u_remaped = remap_values(u, -20, 20, 0, 255)
+                flow_v_remaped = remap_values(v, -20, 20, 0, 255)
+                flow_u_remaped = resize_gray_img(flow_u_remaped, self.resolution)
+                flow_v_remaped = resize_gray_img(flow_v_remaped, self.resolution)
+                joint_flow_shape = (np.array(flow_u_remaped).shape[0], np.array(flow_u_remaped).shape[1], 2)
+                x = np.zeros(joint_flow_shape, dtype=np.uint8)
+                x[:,:,0] = flow_u_remaped
+                x[:,:,1] = flow_v_remaped
+                x = self.transform_flow(x)
+                OFs.append(x)
+            gt_masks.append(resize_img(cv2.imread(os.path.join(self.mask_dir, cat, self.masks_by_cat[cat][i])), self.resolution))
+            img = resize_img(img, self.resolution)
+            img = self.transform_img(img)
+            imgs.append(img)
+
+        sample = {}
+        sample["imgs"] = imgs # range -1,1
+        sample["OFs"] = OFs # range 0,1
+        sample["mask_f"] = masked_img # range -1,1
+        sample["mask_b"] = masked_img_bg # range -1,1
+        sample["mask"] = self.transform_flow(mask_resized) # Mask goes from 0 to 1 so we just apply ToTensor() transform
+        sample["gt_masks"] = gt_masks
+        return sample
+
+    def __len__(self):
+        return self.num_categories
 
 
 

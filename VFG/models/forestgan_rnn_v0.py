@@ -521,3 +521,9 @@ class ForestGANRNN_v0(BaseModel):
             self._load_optimizer(self._optimizer_Gb, 'Gb', load_epoch)
             self._load_optimizer(self._optimizer_Df, 'Df', load_epoch)
             self._load_optimizer(self._optimizer_Db, 'Db', load_epoch)
+
+    
+    def load_val(self,load_epoch):
+        # load G
+        self._load_network(self._Gf, 'Gf', load_epoch)
+        self._load_network(self._Gb, 'Gb', load_epoch)

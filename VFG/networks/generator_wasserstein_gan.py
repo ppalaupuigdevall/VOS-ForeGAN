@@ -183,6 +183,7 @@ class GeneratorF_static_ACR(NetworkBase):
         if(self.t<self.T-1):
             self.last_features = self.reductor(features_)
         self.t = self.t + 1
+
         If_next_masked = att_mask * If_prev_masked + (1-att_mask)*color_mask
         fgmask = self.fgmask_conv(features_)
         fgmask = self.satsig(2.0*fgmask)

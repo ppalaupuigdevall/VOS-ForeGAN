@@ -43,8 +43,9 @@ class ForestGANRNN_v1(BaseModel):
         self._first_bg = sample['mask_b']
         self._real_bg_patches = self._extract_real_patches(self._opt, self._first_fg, self._first_bg) # NOTE TODO This could be done for each t
         self._real_mask = sample['mask']
-        self._transformed_mask = sample['transformed_mask']
-        self._transformed_fg = sample['transformed_fg']
+        if self._is_train:
+            self._transformed_mask = sample['transformed_mask']
+            self._transformed_fg = sample['transformed_fg']
         self._move_inputs_to_gpu(0)
 
         kh, kw, stride_h, stride_w = self._opt.kh, self._opt.kw, self._opt.stride_h, self._opt.stride_w
@@ -536,3 +537,10 @@ class ForestGANRNN_v1(BaseModel):
             self._load_optimizer(self._optimizer_Gb, 'Gb', load_epoch)
             self._load_optimizer(self._optimizer_Df, 'Df', load_epoch)
             self._load_optimizer(self._optimizer_Db, 'Db', load_epoch)
+    
+    def load_val(self,load_epoch):
+        # load G
+        self._load_network(self._Gf, 'Gf', load_epoch)
+        self._load_network(self._Gb, 'Gb', load_epoch)
+        
+        
