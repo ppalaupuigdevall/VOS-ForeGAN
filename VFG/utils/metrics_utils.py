@@ -1,3 +1,5 @@
+import numpy as np
+
 def db_eval_iou(annotation,segmentation):
 
 	""" Compute region similarity as the Jaccard Index.

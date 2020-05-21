@@ -43,7 +43,8 @@ class ForestGANRNN_v0(BaseModel):
         self._first_bg = sample['mask_b']
         self._real_bg_patches = self._extract_real_patches(self._opt, self._first_fg, self._first_bg) # NOTE TODO This could be done for each t
         self._real_mask = sample['mask']
-        self._transformed_mask = sample['transformed_mask']
+        if(self._is_train):
+            self._transformed_mask = sample['transformed_mask']
         self._move_inputs_to_gpu(0)
 
         kh, kw, stride_h, stride_w = self._opt.kh, self._opt.kw, self._opt.stride_h, self._opt.stride_w
@@ -69,7 +70,8 @@ class ForestGANRNN_v0(BaseModel):
             self._first_bg = self._first_bg.cuda()
             self._real_bg_patches = self._real_bg_patches.cuda()
             self._real_mask = self._real_mask.cuda()
-            self._transformed_mask = self._transformed_mask.cuda()
+            if self._is_train:
+                self._transformed_mask = self._transformed_mask.cuda()
         else:
             self._curr_OFs = self._OFs[t].cuda()
             self._next_frame_imgs_ori = self._imgs[t+1].cuda()        

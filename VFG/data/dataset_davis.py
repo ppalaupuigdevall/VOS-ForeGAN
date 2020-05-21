@@ -199,6 +199,8 @@ class ValDavisDataset(data.Dataset):
         self.OF_dir = OF_dir
         self.mask_dir = conf.mask_dir
         self.categories = os.listdir(self.OF_dir)
+        idx_of_dogagility = self.categories.index('dog-agility')
+        del self.categories[idx_of_dogagility]
         self.num_categories = len(self.categories)
         self.imgs_by_cat, self.OFs_by_cat, self.masks_by_cat = {}, {}, {}
         for cat in self.categories:
@@ -206,6 +208,7 @@ class ValDavisDataset(data.Dataset):
             self.OFs_by_cat[cat] = sorted(os.listdir(os.path.join(self.OF_dir, cat)))
             self.masks_by_cat[cat] = sorted(os.listdir(os.path.join(self.mask_dir, cat)))
 
+        
         self.resolution = (conf.resolution)
         self.T = T
         self.create_transform()
@@ -221,16 +224,21 @@ class ValDavisDataset(data.Dataset):
         self.transform_img = transforms.Compose(transforms_list_img)
         self.transform_flow = transforms.ToTensor()
 
+    def get_noms(self):
+        return self.imgs_by_cat['stroller']
+    
     def __getitem__(self, idx):
         cat = self.categories[idx]
         imgs_paths = self.imgs_by_cat[cat][0:self.T]
         imgs_paths = [os.path.join(self.img_dir, cat, x) for x in imgs_paths]
         OFs_paths = self.OFs_by_cat[cat][0:self.T]
         OFs_paths = [os.path.join(self.OF_dir, cat, x) for x in OFs_paths]
-
+        # print("Category: ", cat, " num flows: ", len(OFs_paths))
+        # print(OFs_paths[-1])
         imgs = []
         OFs = []
         gt_masks = []
+        
         
         for i in range(self.T):
             img = cv2.imread(imgs_paths[i])
@@ -248,12 +256,12 @@ class ValDavisDataset(data.Dataset):
                 
                 mask_uni = mask[:,:,0]
                 new_img = img.copy()
-                for i in range(img.shape[0]):
-                    idxs = np.where(mask_uni[i,:]==255)[0]
+                for a in range(img.shape[0]):
+                    idxs = np.where(mask_uni[a,:]==255)[0]
                     if(len(idxs)>0):
                         num_idxs = len(idxs)
-                        new_img[i,idxs[0:num_idxs//2],:] = img[i,idxs[0]-3,:]
-                        new_img[i, idxs[num_idxs//2 +1 :], :] = img[i, idxs[-1]+3,:]
+                        new_img[a,idxs[0:num_idxs//2],:] = img[a,idxs[0]-3,:]
+                        new_img[a, idxs[num_idxs//2 +1 :], :] = img[a, idxs[-1]+3,:]
 
                 masked_img_bg = resize_img(new_img, self.resolution)
                 masked_img_bg = self.transform_img(masked_img_bg)
@@ -273,7 +281,7 @@ class ValDavisDataset(data.Dataset):
                 x[:,:,1] = flow_v_remaped
                 x = self.transform_flow(x)
                 OFs.append(x)
-            gt_masks.append(resize_img(cv2.imread(os.path.join(self.mask_dir, cat, self.masks_by_cat[cat][i])), self.resolution))
+            gt_masks.append(self.transform_flow(resize_img(cv2.imread(os.path.join(self.mask_dir, cat, self.masks_by_cat[cat][i])), self.resolution)))
             img = resize_img(img, self.resolution)
             img = self.transform_img(img)
             imgs.append(img)
