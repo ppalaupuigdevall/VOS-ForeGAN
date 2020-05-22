@@ -14,7 +14,7 @@ class Train:
 
         self._dataset_train = DavisDataset(self._opt, self._opt.T, self._opt.OF_dir)
         # self._dataset_val = ValDavisDataset(self._opt, self._opt.T, self._opt.OF_dir)
-        self._data_loader_train = data.DataLoader(self._dataset_train, self._opt.batch_size, shuffle=True,num_workers=5)
+        self._data_loader_train = data.DataLoader(self._dataset_train, self._opt.batch_size, shuffle=True,num_workers=4)
         self._dataset_train_size = len(self._dataset_train)
         print('# Train videos = %d' % self._dataset_train_size)
 

@@ -71,8 +71,9 @@ class ForestGANRNN_v1(BaseModel):
             self._first_bg = self._first_bg.cuda()
             self._real_bg_patches = self._real_bg_patches.cuda()
             self._real_mask = self._real_mask.cuda()
-            self._transformed_mask = self._transformed_mask.cuda()
-            self._transformed_fg = self._transformed_fg.cuda()
+            if self._is_train:
+                self._transformed_mask = self._transformed_mask.cuda()
+                self._transformed_fg = self._transformed_fg.cuda()
         else:
             self._curr_OFs = self._OFs[t].cuda()
             self._next_frame_imgs_ori = self._imgs[t+1].cuda()        
@@ -146,18 +147,18 @@ class ForestGANRNN_v1(BaseModel):
         if len(self._gpu_ids) > 1:
             self._Gb = torch.nn.DataParallel(self._Gb, device_ids=self._gpu_ids)
         self._Gb.cuda()
+        if self._is_train:
+            self._Df = self._create_discriminator_f()
+            self._Df.init_weights()
+            if len(self._gpu_ids) > 1:
+                self._Df = torch.nn.DataParallel(self._Df, device_ids=self._gpu_ids)
+            self._Df.cuda()
 
-        self._Df = self._create_discriminator_f()
-        self._Df.init_weights()
-        if len(self._gpu_ids) > 1:
-            self._Df = torch.nn.DataParallel(self._Df, device_ids=self._gpu_ids)
-        self._Df.cuda()
-
-        self._Db = self._create_discriminator_b()
-        self._Db.init_weights()
-        if len(self._gpu_ids) > 1:
-            self._Db = torch.nn.DataParallel(self._Db, device_ids=self._gpu_ids)
-        self._Db.cuda()
+            self._Db = self._create_discriminator_b()
+            self._Db.init_weights()
+            if len(self._gpu_ids) > 1:
+                self._Db = torch.nn.DataParallel(self._Db, device_ids=self._gpu_ids)
+            self._Db.cuda()
 
     def _create_generator_f(self):
         return NetworksFactory.get_by_name('generator_wasserstein_gan_f_static_ACR', c_dim=self._extra_ch_Gf, T=self._opt.T)

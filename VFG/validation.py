@@ -27,8 +27,8 @@ class Validate:
         self._l1_criterion = nn.L1Loss()
         self._metrics = []
         self._training_T = 8
-        # self._validate_batch()
-        self._save_masks()
+        self._validate_batch()
+        # self._save_masks()
         # metrics is a list of dictionaries that will define a DataFrame
                 
     def _validation(self,iteracio):
@@ -94,7 +94,7 @@ class Validate:
                 fgs, bgs, fakes, masks = self._model.forward(self._opt.T)
                 
                 for t in range(self._opt.T-period):
-                    bin_mask = self.binarize_mask(tensor2im(masks[t],unnormalize=False), 210)
+                    bin_mask = self.binarize_mask(tensor2im(masks[t],unnormalize=False), 200)
                     # Jaccard Index
                     j_batch[t//(self._training_T-1)] = j_batch[t//(self._training_T-1)] + db_eval_iou(tensor2im(val_batch['gt_masks'][t+1], unnormalize=False), bin_mask)
                     # Boundary Index
@@ -144,7 +144,7 @@ class Validate:
             print("metrics: ", m)
             self._metrics.extend(m)
             df = pd.DataFrame(self._metrics)
-            df.to_csv(os.path.join(self._opt.save_path, self._opt.name, 'metrics_timesteps_NEW.csv'))
+            df.to_csv(os.path.join(self._opt.save_path, self._opt.name, 'metrics_timesteps_200.csv'))
             
     def _save_masks(self):
         def what_is_what(s):
@@ -176,7 +176,7 @@ class Validate:
             print(t)
             if t%(self._training_T-1) == (self._training_T-2):
                 
-                bin_mask = self.binarize_mask(tensor2im(masks[t]), 210)
+                bin_mask = self.binarize_mask(tensor2im(masks[t]), 190)
                 # cv2.imwrite(os.path.join(self._opt.save_path,self._opt.name,'masks','z_mask_'+"{:04d}".format(t)+'_debug_'+ "{:04d}".format(int(iteracio)) + '.jpeg'), bin_mask)
                 cv2.imwrite(os.path.join(self._opt.save_path,self._opt.name,'masks','z_GT_mask_'+"{:04d}".format(t)+'_debug_'+ "{:04d}".format(int(iteracio)) + '.jpeg'), tensor2im(val_batch['gt_masks'][t+1], unnormalize=False))
                 # Draw contours:
@@ -198,8 +198,8 @@ class Validate:
         bin_mask_3channels[:,:,0] = bin_mask
         bin_mask_3channels[:,:,1] = bin_mask
         bin_mask_3channels[:,:,2] = bin_mask
-        # return bin_mask_3channels       
-        return bin_mask
+        return bin_mask_3channels       
+        # return bin_mask
 
 if __name__ == "__main__":
     Validate()
