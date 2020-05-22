@@ -13,16 +13,24 @@ class ModelsFactory:
         if model_name == 'forestgan_convlstm_v0':
             from models.forestgan_convlstm_v0 import ForestGAN_ConvLSTM_v0
             model = ForestGAN_ConvLSTM_v0(*args, **kwargs)
-        elif model_name == 'forestgan_rnn_v0':
-            from models.forestgan_rnn_v0 import ForestGANRNN_v0
-            model = ForestGANRNN_v0(*args, **kwargs)
+        elif model_name == 'forestgan_rnn_basic_feat':
+            from models.forestgan_rnn_basic_feat import ForestGANRNN_basic_feat
+            model = ForestGANRNN_basic_feat(*args, **kwargs)
         elif model_name == 'forestgan_rnn_v02':
             from models.forestgan_rnn_v02 import ForestGANRNN_v02
             model = ForestGANRNN_v02(*args, **kwargs)
-        elif model_name == 'forestgan_rnn_v1':
-            from models.forestgan_rnn_v1 import ForestGANRNN_v1
-            model = ForestGANRNN_v1(*args, **kwargs)
+        elif model_name == 'forestgan_rnn_extended_feat':
+            from models.forestgan_rnn_extended_feat import ForestGANRNN_extended_feat
+            model = ForestGANRNN_extended_feat(*args, **kwargs)
+        elif model_name == 'forestgan_rnn_extended_fg':
+            from models.forestgan_rnn_extended_fg import ForestGANRNN_extended_fg
+            model = ForestGANRNN_extended_fg(*args, **kwargs)
+        elif model_name == 'forestgan_convlstm_basic_feat':
+            from models.forestgan_convlstm_basic_feat import ForestGAN_ConvLSTM_basic_feat
+            model = ForestGAN_ConvLSTM_basic_feat(*args, **kwargs)
+
         elif model_name == 'forestgan_rnn_noof':
+
             from models.forestgan_rnn_noof import ForestGANRNN_noof
             model = ForestGANRNN_noof(*args, **kwargs)
         elif model_name == 'train_gb':

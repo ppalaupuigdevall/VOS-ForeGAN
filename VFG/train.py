@@ -17,11 +17,8 @@ class Train:
         self._data_loader_train = data.DataLoader(self._dataset_train, self._opt.batch_size, shuffle=True,num_workers=4)
         self._dataset_train_size = len(self._dataset_train)
         print('# Train videos = %d' % self._dataset_train_size)
-
         self._model = ModelsFactory.get_by_name(self._opt.model, self._opt)
-        
         self._tb_visualizer = Visualizer(self._opt)
-        # self._tb_visualizer = Visualizerv8(self._opt)
 
         self._train()
 
@@ -40,7 +37,7 @@ class Train:
                   (i_epoch, self._opt.nepochs_no_decay + self._opt.nepochs_decay, time_epoch,
                    time_epoch / 60, time_epoch / 3600))
 
-            if(i_epoch % 25 == 0):
+            if(i_epoch % 100 == 0):
                 self._model.save(i_epoch)
                 print('saving the model at the end of epoch %d' % (i_epoch))
             
