@@ -46,6 +46,9 @@ class NetworksFactory:
         elif network_name == 'generator_wasserstein_gan_f_convlstm':
             from networks.convlstm import GeneratorF_convLSTM
             network = GeneratorF_convLSTM(*args, **kwargs)
+        elif network_name == 'generator_wasserstein_gan_f_convlstm_mask_from_fg':
+            from networks.convlstm import GeneratorF_convLSTM_mask_from_fg
+            network = GeneratorF_convLSTM_mask_from_fg(*args, **kwargs)
         elif network_name == 'generator_wasserstein_gan_b_convlstm':
             from networks.convlstm import GeneratorB_convLSTM 
             network = GeneratorB_convLSTM(*args, **kwargs)        

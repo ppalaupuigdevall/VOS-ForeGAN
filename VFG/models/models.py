@@ -29,6 +29,11 @@ class ModelsFactory:
             from models.forestgan_convlstm_basic_feat import ForestGAN_ConvLSTM_basic_feat
             model = ForestGAN_ConvLSTM_basic_feat(*args, **kwargs)
 
+        elif model_name == 'forestgan_convlstm_basic_fg':
+            from models.forestgan_convlstm_basic_fg import ForestGAN_ConvLSTM_basic_fg
+            model = ForestGAN_ConvLSTM_basic_fg(*args, **kwargs)
+
+
         elif model_name == 'forestgan_rnn_noof':
 
             from models.forestgan_rnn_noof import ForestGANRNN_noof
