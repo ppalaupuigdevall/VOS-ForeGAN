@@ -175,7 +175,7 @@ class DavisDataset(data.Dataset):
         sample = {}
         sample["imgs"] = imgs # range -1,1
         sample["OFs"] = OFs # range 0,1
-        sample["warped_imgs"] = warped_imgs # range -1,1
+        # sample["warped_imgs"] = warped_imgs # range -1,1
         sample["mask_f"] = masked_img # range -1,1
         sample["mask_b"] = masked_img_bg # range -1,1
         sample["mask"] = self.transform_flow(mask_resized) # Mask goes from 0 to 1 so we just apply ToTensor() transform

@@ -16,6 +16,12 @@ class ModelsFactory:
         elif model_name == 'forestgan_rnn_basic_feat':
             from models.forestgan_rnn_basic_feat import ForestGANRNN_basic_feat
             model = ForestGANRNN_basic_feat(*args, **kwargs)
+        elif model_name == 'forestgan_rnn_v1':
+            from models.forestgan_rnn_v1 import ForestGANRNN_v1
+            model = ForestGANRNN_v1(*args, **kwargs)
+        elif model_name == 'forestgan_rnn_v3':
+            from models.forestgan_rnn_v3 import ForestGANRNN_v3
+            model = ForestGANRNN_v3(*args, **kwargs)
         elif model_name == 'forestgan_rnn_v02':
             from models.forestgan_rnn_v02 import ForestGANRNN_v02
             model = ForestGANRNN_v02(*args, **kwargs)
@@ -28,7 +34,6 @@ class ModelsFactory:
         elif model_name == 'forestgan_convlstm_basic_feat':
             from models.forestgan_convlstm_basic_feat import ForestGAN_ConvLSTM_basic_feat
             model = ForestGAN_ConvLSTM_basic_feat(*args, **kwargs)
-
         elif model_name == 'forestgan_convlstm_basic_fg':
             from models.forestgan_convlstm_basic_fg import ForestGAN_ConvLSTM_basic_fg
             model = ForestGAN_ConvLSTM_basic_fg(*args, **kwargs)
