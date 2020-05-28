@@ -125,13 +125,13 @@ class Q_real_M(nn.Module):
         self.veroneses = []
         self.has_M_inv = False 
         self.M_inv = None
-        self.build_M = False # Will be true when the autoencoder gets good reconstruction
+        self.build_M = True # Will be true when the autoencoder gets good reconstruction
 
     def forward(self, x):
-        if(not self.has_M_inv and self.build_M):
+        if((not self.has_M_inv) and (self.build_M)):
             # We want only veronese maps to build the moment matrix once we have good reconstruction (self.build_M = True) !
             npoints, dims = x.size()
-            v_x, _ = generate_veronese(x.view(dims, npoints), self.n)
+            v_x, _ = generate_veronese(x.view(dims, npoints).cuda(), self.n)
             self.veroneses.append(v_x.cpu())
         elif(self.has_M_inv):
             # Create the veronese map of z
@@ -148,16 +148,21 @@ class Q_real_M(nn.Module):
         # This method should be created from outlise the class
         n = len(self.veroneses)
         d, bs = self.veroneses[0].size()
-        V = self.veroneses[0]
-        for i in range(0,n - 1 ):
-            V = torch.cat([V, self.veroneses[i+1]], dim=1)
-        V = torch.matmul(V.view(bs*n,d,1), V.view(bs*n,1,d))
-        V = torch.mean(V,dim=0)
-        self.M_inv = torch.inverse(V).cuda('cuda:2')
+        # V = self.veroneses[0]
+        Mc = torch.tensor([])
+        for i in range(0,n):
+            #V = torch.cat([V, self.veroneses[i+1]], dim=1)
+            Mc_m = torch.matmul(V.view(bs,d,1), V.view(bs,1,d))
+            Mc_m = torch.mean(Mc_c, dim=0)
+            Mc = torch.cat([Mc,Mc_m.unsqueeze(0)])
+                    
+        M = torch.mean(Mc,dim=0)
+        self.M_inv = torch.inverse(M).cuda()
         self.has_M_inv = True
     
     def set_build_M(self):
         self.build_M = True
+        self.create_M()
 
 
 class Q_real_M_batches(nn.Module):
