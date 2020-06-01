@@ -1,9 +1,9 @@
 import numpy as np
 import torch
-torch.set_default_dtype(torch.float64)
+# torch.set_default_dtype(torch.float64)
 from scipy.special import comb
-torch.cuda.set_device(1)
-torch.manual_seed(0)
+# torch.cuda.set_device(1)
+# torch.manual_seed(0)
 def exponent_nk(n, K):
     id = np.diag(np.ones(K))
     exp = id
@@ -41,9 +41,9 @@ def veronese_nk(x, n, if_cuda=False, if_coffiecnt=False):
     K, N = x.shape[0], x.shape[1]
     powers = exponent_nk(n, K)
     if if_cuda:
-        powers = torch.tensor(powers, dtype=torch.float64).cuda()
+        powers = torch.tensor(powers, dtype=torch.float32).cuda()
     else:
-        powers = torch.tensor(powers, dtype=torch.float64)
+        powers = torch.tensor(powers, dtype=torch.float32)
     if n == 0:
         y = 1
     elif n == 1:
@@ -207,9 +207,10 @@ if __name__ == "__main__":
         Q = torch.matmul(torch.matmul(v_x_test.view(1,1,dim_v),M_inv), v_x_test.view(1,dim_v,1))
         print("Outlier: ",Q.item())
     else:
-        d = 16
-        BS = 100
+        d = 1
         n = 2
+        dim_v = int(comb(d+n, n))
+        BS = dim_v - 1
         # x = torch.tensor([1.0,2.0,3.0])
         mom = Q_real_M(d,n)
         for i in range(20):
@@ -219,8 +220,8 @@ if __name__ == "__main__":
             _ = mom(x)
         mom.create_M()
         # 0 inlier 1 outlier
-        dim_v = int(comb(d+n, n))
-        thr = dim_v
+        
+        thr = 5*dim_v
         num_examples = dim_v - 1 ## numero magico si no no funciona 
         x_test = torch.randn([num_examples,d]).cuda()
         # Q = torch.matmul(torch.matmul(v_x_test.view(1,1,dim_v),M_inv), v_x_test.view(1,dim_v,1))

@@ -20,28 +20,24 @@ class Test:
         for i_test_batch, test_batch in enumerate(self._data_loader_test):
             self._model.set_input(test_batch)
             if self._opt.use_moments:
-                # fgs, bgs, fakes, masks, features = self._model.forward(self._opt.T)
-                # feature = features[0]
-                feature = torch.randn(1,64,224,416) * test_batch['mask'][:,0,:,:] + (torch.randn(1,64,224,416)+5.0) * (1-test_batch['mask'][:,0,:,:])
+                fgs, bgs, fakes, masks, features = self._model.forward(self._opt.T)
+                feature = features[0]
+                # feature = torch.randn(1,64,224,416) * test_batch['mask'][:,0,:,:] + (torch.randn(1,64,224,416)+5.0) * (1-test_batch['mask'][:,0,:,:])
                 gt_mask = test_batch['mask'][0,:,:,:]
                 np.save('gt_mask.npy', gt_mask.numpy())    
                 
                 mom = Q_real_M(64,2)
-                variable_auxiliar = torch.zeros(250,64)
+                variable_auxiliar = torch.zeros(2144,64)
                 contador = 0
                 idxs_nz = torch.nonzero(gt_mask[0,:,:])
-                collonae = torch.zeros(224,416)
-
                 for p in range(idxs_nz.size()[0]):
                     print(p/idxs_nz.size()[0])
-                    if(contador == 250):
+                    if(contador == 2144):
                         _ = mom(variable_auxiliar)
                         contador = 0
-                    elif contador < 250:
+                    elif contador < 2144:
                         variable_auxiliar[contador,:] = feature[:,:,idxs_nz[p][0],idxs_nz[p][1]]
-                        collonae[idxs_nz[p][0],idxs_nz[p][1]] = 1.0
                         contador = contador + 1
-                np.save('gt_mask_collonae.npy', collonae.numpy())
                 # for a in range(self._opt.resolution[0]):
                 #     for b in range(self._opt.resolution[1]):
                 #         if gt_mask[0,a,b] == 1.0:
@@ -73,7 +69,7 @@ class Test:
                     for a in range(int(self._opt.resolution[0]/dhmom)):
                         print(a/numcops)
                         for b in range(int(self._opt.resolution[1]/dwmom)):
-                            laval = feature[0,:,dhmom*a:dhmom*a+dhmom,dwmom*b:dwmom*b+dwmom].contiguous().view(dhmom*dwmom, 64)
+                            laval = features[t][0,:,dhmom*a:dhmom*a+dhmom,dwmom*b:dwmom*b+dwmom].contiguous().view(dhmom*dwmom, 64)
                             laval = laval.cuda()
                             wa = mom(laval)
                             momento[dhmom*a:dhmom*a+dhmom,dwmom*b:dwmom*b+dwmom] = wa.view(dhmom,dwmom)
