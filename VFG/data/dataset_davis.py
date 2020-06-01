@@ -73,6 +73,7 @@ class DavisDataset(data.Dataset):
         self.OF_dir = OF_dir
         self.mask_dir = conf.mask_dir
         self.categories = os.listdir(self.OF_dir)
+        self.categories = ['bmx-bumps']
         self.num_categories = len(self.categories)
         self.imgs_by_cat, self.OFs_by_cat, self.masks_by_cat = {}, {}, {}
         for cat in self.categories:
@@ -127,10 +128,12 @@ class DavisDataset(data.Dataset):
             img = cv2.imread(imgs_paths[i])
             if(i==0):
                 mask = cv2.imread(os.path.join(self.mask_dir, cat, self.masks_by_cat[cat][0]))
+                # cv2.imwrite('./gt_mask_orisize.png', mask)
                 masked_img = cv2.bitwise_and(img, mask)
                 masked_img_ori = masked_img.copy()
-                
+
                 mask_resized = resize_img(mask, self.resolution)
+                # cv2.imwrite('./gt_mask_resized.png', np.array(mask_resized))
                 masked_img = resize_img(masked_img, self.resolution)
                 
                 masked_img = self.transform_img(masked_img)
@@ -179,6 +182,7 @@ class DavisDataset(data.Dataset):
         sample["mask_f"] = masked_img # range -1,1
         sample["mask_b"] = masked_img_bg # range -1,1
         sample["mask"] = self.transform_flow(mask_resized) # Mask goes from 0 to 1 so we just apply ToTensor() transform
+        
         sample["transformed_mask"] = self.transform_flow(self.geom_transforms(resize_img(mask, self.resolution)))
         sample["transformed_fg"] = self.transform_img(self.fg_geom_transforms(resize_img(masked_img_ori, self.resolution)))
         if self._noof:

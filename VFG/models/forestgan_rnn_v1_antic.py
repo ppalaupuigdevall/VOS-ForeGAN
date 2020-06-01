@@ -21,8 +21,6 @@ class ForestGANRNN_v1_antic(BaseModel):
         self._extra_ch_Gf = 2
         self._extra_ch_Gb = 0
         self._use_moments = opt.use_moments
-        print(self._use_moments)
-        print("MALANADRO")
 
         # create networks
         self._init_create_networks()

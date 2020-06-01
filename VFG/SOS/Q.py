@@ -136,7 +136,7 @@ class Q_real_M(nn.Module):
         elif(self.has_M_inv):
             # Create the veronese map of z
             npoints, dims = x.size()
-            v_x, _ = generate_veronese(x.view(dims, npoints), self.n)
+            v_x, _ = generate_veronese(x.view(dims, npoints).cuda(), self.n)
             dim_veronese, BS = v_x.size()
             x = torch.matmul(
                 torch.matmul(
@@ -146,19 +146,29 @@ class Q_real_M(nn.Module):
 
     def create_M(self):
         # This method should be created from outlise the class
-        n = len(self.veroneses)
-        d, bs = self.veroneses[0].size()
-        # V = self.veroneses[0]
-        Mc = torch.tensor([])
-        for i in range(0,n):
-            #V = torch.cat([V, self.veroneses[i+1]], dim=1)
-            Mc_m = torch.matmul(V.view(bs,d,1), V.view(bs,1,d))
-            Mc_m = torch.mean(Mc_c, dim=0)
-            Mc = torch.cat([Mc,Mc_m.unsqueeze(0)])
-                    
-        M = torch.mean(Mc,dim=0)
-        self.M_inv = torch.inverse(M).cuda()
-        self.has_M_inv = True
+        
+        with torch.no_grad():
+            n = len(self.veroneses)
+            d, bs = self.veroneses[0].size()
+            Mc = torch.tensor([])
+            for i in range(0,n):
+                print(i/n)
+                #V = torch.cat([V, self.veroneses[i+1]], dim=1)
+                V = self.veroneses[i]
+                A = self.veroneses[i].cuda()
+                A = A.view(bs,d,1)
+                B = self.veroneses[i].clone().cuda()
+                B = B.view(bs,1,d)
+                Mc_m = torch.matmul(A, B)
+                # Mc_m = torch.bmm(V.view(bs,d,1), V.view(bs,1,d))
+                Mc_m = torch.mean(Mc_m, dim=0)
+                Mc = torch.cat([Mc,Mc_m.unsqueeze(0)])
+                
+                        
+            M = torch.mean(Mc,dim=0)
+            self.M_inv = torch.inverse(M).cuda()
+            
+            self.has_M_inv = True
     
     def set_build_M(self):
         self.build_M = True
