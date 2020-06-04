@@ -42,14 +42,14 @@ class ForestGANRNN_v1(BaseModel):
         self._first_fg = sample['mask_f']
         self._first_bg = sample['mask_b']
         self._real_bg_patches = self._extract_real_patches(self._opt, self._first_fg, self._first_bg) # NOTE TODO This could be done for each t
-        self._real_mask = sample['mask']
+        # self._real_mask = sample['mask']
         # if(self._is_train):
             # self._transformed_mask = sample['transformed_mask']
         self._move_inputs_to_gpu(0)
 
         kh, kw, stride_h, stride_w = self._opt.kh, self._opt.kw, self._opt.stride_h, self._opt.stride_w
         kernel = torch.ones(1,3,kh,kw)
-        output = F.conv2d(sample['mask'], kernel, stride=(stride_h,stride_w))
+        output = F.conv2d(sample['mask_f'], kernel, stride=(stride_h,stride_w))
         convsize = output.size()[-1]
         indexes = torch.ge(output, 0.001)
         nonzero = torch.nonzero(indexes[0,0,:,:])
@@ -69,7 +69,7 @@ class ForestGANRNN_v1(BaseModel):
             self._first_fg = self._first_fg.cuda()
             self._first_bg = self._first_bg.cuda()
             self._real_bg_patches = self._real_bg_patches.cuda()
-            self._real_mask = self._real_mask.cuda()
+            # self._real_mask = self._real_mask.cuda()
             # if self._is_train:
             #     self._transformed_mask = self._transformed_mask.cuda()
         else:
@@ -279,7 +279,7 @@ class ForestGANRNN_v1(BaseModel):
             self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, False) * self._opt.lambda_Gf_prob_fg
             
             # Fake bgs
-            patches_Inext_bg = self._extract_img_patches_mask_sampled(Inext_fake_bg)
+            patches_Inext_bg = self._extract_img_patches(Inext_fake_bg)
 
             d_fake_bg = self._Db(patches_Inext_bg)
             self._loss_g_bg = self._loss_g_bg + self._compute_loss_D(d_fake_bg, False) * self._opt.lambda_Gb_prob
@@ -369,7 +369,7 @@ class ForestGANRNN_v1(BaseModel):
             d_real_bg = self._Db(paches_bg_real)
             self._loss_db_real = self._loss_db_real + self._compute_loss_D(d_real_bg, True) * self._opt.lambda_Db_prob
             
-            patches_bg_fake = self._extract_img_patches_mask_sampled(Inext_fake_bg)
+            patches_bg_fake = self._extract_img_patches(Inext_fake_bg)
             fake_samples_bg.append(patches_bg_fake)
             d_fake_bg = self._Db(patches_bg_fake)
             self._loss_db_fake = self._loss_db_fake + self._compute_loss_D(d_fake_bg, False) * self._opt.lambda_Db_prob

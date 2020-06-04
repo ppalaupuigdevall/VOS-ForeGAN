@@ -48,66 +48,57 @@ class GeneratorF(NetworkBase):
         # Prepare temporal skip-connections
         last_layer_dim = curr_dim
         # 0,1, .. T-1
-        self.img_reg_packs = []
-        self.attention_reg_packs = []
-        self.reductor = [] 
+        self.img_reg_packs = None
+        self.attention_reg_packs = None
+        self.reductor = None
         
-        for i in range(T-1):
-            layers_img = []
-            layers_reductor = []
-            layers_att = []
+        layers_img = []
+        layers_reductor = []
+        layers_att = []
 
+        layers_reductor.append(nn.Conv2d(last_layer_dim, int(last_layer_dim/self.factor), kernel_size=3, stride=1, padding=1, bias=False))
+        layers_reductor.append(nn.ReLU(inplace=True))
+        self.reductor.append(nn.Sequential(*layers_reductor))
 
-            layers_reductor.append(nn.Conv2d(last_layer_dim, int(last_layer_dim/self.factor), kernel_size=3, stride=1, padding=1, bias=False))
-            layers_reductor.append(nn.ReLU(inplace=True))
-            self.reductor.append(nn.Sequential(*layers_reductor))
+        layers_img.append(nn.Conv2d(last_layer_dim, 3, kernel_size=7, stride=1, padding=3, bias=False))
+        layers_img.append(nn.Tanh())
+        self.img_reg_packs.append(nn.Sequential(*layers_img))
 
-            layers_img.append(nn.Conv2d(last_layer_dim, 3, kernel_size=7, stride=1, padding=3, bias=False))
-            layers_img.append(nn.Tanh())
-            self.img_reg_packs.append(nn.Sequential(*layers_img))
+        layers_att.append(nn.Conv2d(last_layer_dim, 1, kernel_size=7, stride=1, padding=3, bias=False))
+        layers_att.append(nn.Sigmoid())
+        self.attention_reg_packs.append(nn.Sequential(*layers_att))
 
-            layers_att.append(nn.Conv2d(last_layer_dim, 1, kernel_size=7, stride=1, padding=3, bias=False))
-            layers_att.append(nn.Sigmoid())
-            self.attention_reg_packs.append(nn.Sequential(*layers_att))
-
-            last_layer_dim = int(curr_dim + last_layer_dim/self.factor)
-            if(i==0):
-                self.factor = self.factor + 1
-        
-        self.img_reg_packs = nn.ModuleList(self.img_reg_packs)
-        self.attention_reg_packs = nn.ModuleList(self.attention_reg_packs)
-        self.reductor = nn.ModuleList(self.reductor)
+        last_layer_dim = int(curr_dim + last_layer_dim/self.factor)
+    
+        self.img_reg_packs = nn.Sequential(self.img_reg_packs)
+        self.attention_reg_packs = nn.Sequential(self.attention_reg_packs)
+        self.reductor = nn.Sequential(self.reductor)
         self.fgmask_conv = nn.Conv2d(64,1,3,1,1,bias=False)
         self.satsig = nn.Sigmoid()
         self.reset_params()
 
     def reset_params(self):
-        self.last_features = [0] * self.T
-        self.last_features[0] = torch.tensor([]).cuda()
+        self.last_features = torch.zeros(64,224,416).cuda()
+        self.last_features = torch.tensor([]).cuda()
         self.t = 0
         
-    def forward(self, If_prev_masked, OFprev2next, If_next_warped): 
+    def forward(self, If_prev_masked, OFprev2next): 
         
         x = torch.cat([If_prev_masked, OFprev2next], dim=1)
         # x = If_next_warped
         features = self.main(x)
         features_ = torch.cat([self.last_features[self.t], features], dim=1) # Concat in channel dimension
 
-        # print("Last feature = ", self.last_features[self.t].size())
-        # print("features_    = ", features_.size())
-        color_mask = self.img_reg_packs[self.t](features_)
-        att_mask = self.attention_reg_packs[self.t](features_)
+        color_mask = self.img_reg_packs(features_)
+        att_mask = self.attention_reg_packs(features_)
         if(self.t<self.T-1):
-            self.last_features[self.t+1] = self.reductor[self.t](features_)
-        
+            self.last_features = self.reductor(features_)
         self.t = self.t + 1
         
-        # If_next_masked = att_mask * (If_next_warped + color_mask)  + ((1 - att_mask) * (If_next_warped + color_mask) -1 ) # experiment_1_2
-        If_next_masked = att_mask * If_next_warped + (1-att_mask)*color_mask # experiment_4
+        If_next_masked = att_mask * If_prev_masked + (1-att_mask)*color_mask # experiment_4
         fgmask = self.fgmask_conv(features)
         fgmask = self.satsig(20*fgmask)
         If_next_masked = fgmask * If_next_masked + (1-fgmask) * If_next_masked
-        # foreground_mask = #sigmaoid
         return  If_next_masked, fgmask
 
 
@@ -173,7 +164,7 @@ class GeneratorF_static_ACR(NetworkBase):
     def reset_params(self):
         self.last_features = torch.zeros(64,224,416).cuda()
         self.t = 0
-        
+       
     def forward(self, If_prev_masked, OFprev2next): 
         x = torch.cat([If_prev_masked, OFprev2next], dim=1)
         features = self.main(x)
@@ -186,7 +177,7 @@ class GeneratorF_static_ACR(NetworkBase):
 
         If_next_masked = att_mask * If_prev_masked + (1-att_mask)*color_mask
         fgmask = self.fgmask_conv(features_)
-        fgmask = self.satsig(2.0*fgmask)
+        fgmask = self.satsig(30.0*fgmask)
         If_next_masked = fgmask * If_next_masked + (1-fgmask) * -1.0 *torch.ones_like(If_next_masked).cuda()
         return  If_next_masked, fgmask
 
@@ -267,7 +258,8 @@ class GeneratorF_static_ACR_v1(NetworkBase):
         If_next_masked = att_mask * If_prev_masked + (1-att_mask)*color_mask
         fgmask = self.fgmask_conv(features)
         fgmask = self.satsig(30.0*fgmask)
-        If_next_masked = fgmask * If_next_masked + (1-fgmask) * -1.0 *torch.ones_like(If_next_masked).cuda()
+        # If_next_masked = fgmask * If_next_masked + (1-fgmask) * -1.0 *torch.ones_like(If_next_masked).cuda()
+        If_next_masked = fgmask*If_next_masked + (1-fgmask)*If_next_masked
         return  If_next_masked, fgmask
 
 

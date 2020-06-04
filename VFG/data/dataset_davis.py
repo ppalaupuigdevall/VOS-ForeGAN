@@ -244,10 +244,12 @@ class ValDavisDataset(data.Dataset):
             img = cv2.imread(imgs_paths[i])
             if(i==0):
                 mask = cv2.imread(os.path.join(self.mask_dir, cat, self.masks_by_cat[cat][0]))
+                # cv2.imwrite('./gt_mask_orisize.png', mask)
                 masked_img = cv2.bitwise_and(img, mask)
                 
                 masked_img_ori = masked_img.copy()
                 mask_resized = resize_img(mask, self.resolution)
+                # cv2.imwrite('./gt_mask_resized.png', mask_resized)
                 masked_img = resize_img(masked_img, self.resolution)
                 masked_img = self.transform_img(masked_img)
 
