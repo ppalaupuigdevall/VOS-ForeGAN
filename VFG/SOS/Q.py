@@ -213,10 +213,15 @@ class Q_real_M(nn.Module):
             # print("npoints = ",BS, " dims = ",dim_veronese)
             # first = torch.matmul(v_x.view(BS,1,dim_veronese), self.M_inv)
             # x = torch.matmul(first, v_x.view(BS, dim_veronese, 1))
+            # x = torch.matmul(
+            #     v_x.view(BS, 1, dim_veronese), torch.matmul(self.M_inv,
+            #     v_x.view(BS, dim_veronese, 1)))
+            
+            # BATCH version, careful because it consumes a lot of gpu memory
             x = torch.matmul(
-                torch.matmul(
-                v_x.view(BS, 1, dim_veronese), self.M_inv),
-                v_x.view(BS, dim_veronese, 1))
+                v_x.view(BS, 1, dim_veronese), torch.matmul(torch.cat(BS*[self.M_inv], dim=0),
+                v_x.view(BS, dim_veronese, 1)))
+            
         return x
 
     def create_M(self):
@@ -227,7 +232,7 @@ class Q_real_M(nn.Module):
             d, bs = self.veroneses[0].size()
             Mc = torch.tensor([])
             for i in range(0,n):
-                print(i/n)
+                # print(i/n)
                 #V = torch.cat([V, self.veroneses[i+1]], dim=1)
                 V = self.veroneses[i]
                 A = self.veroneses[i]
@@ -236,12 +241,21 @@ class Q_real_M(nn.Module):
                 B = B.view(bs,1,d)
                 Mc_m = torch.matmul(A, B)
                 # Mc_m = torch.bmm(V.view(bs,d,1), V.view(bs,1,d))
+                # print(Mc_m)
                 Mc_m = torch.mean(Mc_m, dim=0)
                 Mc = torch.cat([Mc,Mc_m.unsqueeze(0)])
-                print(Mc.size())
-            M = torch.mean(Mc,dim=0)
+                # print(Mc.size())
+            M = torch.mean(Mc,dim=0) + 0.0001 * torch.eye(d)
+            # M = torch.mean(Mc,dim=0)
+            # print(M.size())
+            print("Moment matrix, should have hankel structure")
+            print(M)
+            U_m, S_m, V_m = torch.svd(M)
+            print("singular values of M = ", S_m)
             self.M_inv = torch.inverse(M).cuda()
-            print(self.M_inv.size())
+            print(self.M_inv)
+            # U,S,V = torch.svd(self.M_inv)
+            # print("Singular values of M_inv = ", S)
             self.has_M_inv = True
     
     def set_build_M(self):
@@ -268,7 +282,6 @@ class Q_real_M_batches(nn.Module):
         super(Q_real_M_batches, self).__init__()
         self.n = n
         self.dim_veronese = int(comb(x_size + n, n))
-        
         self.evaluation = False
         self.M_inv_copy = torch.eye(self.dim_veronese)
     def forward(self, x):

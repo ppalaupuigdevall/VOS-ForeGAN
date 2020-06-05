@@ -8,6 +8,7 @@ from imutils import build_montages
 import numpy as np
 import torch
 from SOS.Q import Q_real_M
+import pandas as pd
 class Test:
     def __init__(self):
         self._opt = TestOptions().parse()
@@ -22,32 +23,42 @@ class Test:
             if self._opt.use_moments:
                 fgs, bgs, fakes, masks, features = self._model.forward(self._opt.T)
                 feature = features[0]
-                # feature = torch.randn(1,64,224,416) * test_batch['mask'][:,0,:,:] + (torch.randn(1,64,224,416)+5.0) * (1-test_batch['mask'][:,0,:,:])
                 gt_mask = test_batch['mask'][0,:,:,:]
-                np.save('gt_mask.npy', gt_mask.numpy())    
-                
                 mom = Q_real_M(64,2)
-                variable_auxiliar = torch.zeros(2144,64)
+                
+                num_examples = 1
+                variable_auxiliar = torch.zeros(num_examples,64)
                 contador = 0
                 idxs_nz = torch.nonzero(gt_mask[0,:,:])
+                mets = []
+                num_cops = self._opt.resolution[0]
+                for a in range(self._opt.resolution[0]):
+                    print(a/num_cops)
+                    for b in range(self._opt.resolution[1]):
+                        met = {}
+                        if(gt_mask[0,a,b]>0.0):
+                            met['in_out'] = 'in'
+                            feat = feature[:,:,a,b]
+                            for ua in range(64):
+                                met[ua] = feat[0,ua].item()
+                            mets.append(met)
+                        else:
+                            met['in_out'] = 'out'
+                            feat = feature[:,:,a,b]
+                            for ua in range(64):
+                                met[ua] = feat[0,ua].item()
+                            mets.append(met)
+                df = pd.DataFrame(mets)
+                print("Saving csv")
+                df.to_csv(os.path.join(self._opt.save_path, self._opt.name, 'features_in_out.csv'))                
+
+
+
+                print(idxs_nz.size())
+                print(idxs_nz.size()[0]/num_examples)
                 for p in range(idxs_nz.size()[0]):
                     print(p/idxs_nz.size()[0])
-                    if(contador == 2144):
-                        _ = mom(variable_auxiliar)
-                        contador = 0
-                    elif contador < 2144:
-                        variable_auxiliar[contador,:] = feature[:,:,idxs_nz[p][0],idxs_nz[p][1]]
-                        contador = contador + 1
-                # for a in range(self._opt.resolution[0]):
-                #     for b in range(self._opt.resolution[1]):
-                #         if gt_mask[0,a,b] == 1.0:
-                #             if(contador == 100):
-                #                 _ = mom(variable_auxiliar)
-                #                 contador = 0
-                #             elif contador < 100:
-                #                 variable_auxiliar[contador,:] = feature[:,:,a,b]
-                #                 contador = contador + 1
-                # Super slow
+                    _ = mom(feature[:,:,idxs_nz[p][0],idxs_nz[p][1]])                        
                 mom.set_build_M()
             else:
                 fgs, bgs, fakes, masks = self._model.forward(self._opt.T)
@@ -59,29 +70,45 @@ class Test:
         cat = self._dataset_test._cat
         imgs = self._dataset_test.imgs_by_cat[cat]
 
-        dhmom, dwmom = 7*4, 13*4
         for t in range(self._opt.T-1):
-            if self._opt.use_moments:
-                with torch.no_grad():
-                    momento = torch.zeros(224,416)
-                    print("Beginning moment evaluation")   
-                    numcops = self._opt.resolution[0]/dhmom
-                    for a in range(int(self._opt.resolution[0]/dhmom)):
-                        print(a/numcops)
-                        for b in range(int(self._opt.resolution[1]/dwmom)):
-                            laval = features[t][0,:,dhmom*a:dhmom*a+dhmom,dwmom*b:dwmom*b+dwmom].contiguous().view(dhmom*dwmom, 64)
-                            laval = laval.cuda()
-                            wa = mom(laval)
-                            momento[dhmom*a:dhmom*a+dhmom,dwmom*b:dwmom*b+dwmom] = wa.view(dhmom,dwmom)
-                    np.save('momento_' + str(t)+'.npy', momento.cpu().numpy())    
-
+            print(t)
             img_name = os.path.join(self._dataset_test.img_dir,cat, imgs[t+1])    
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'fg_'+ "{:02d}".format(t) + '.jpeg'), rgb2bgr(tensor2im(fgs[t])))
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'bg_'+ "{:02d}".format(t) + '.jpeg'), rgb2bgr(tensor2im(bgs[t])))
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'fake_'+ "{:02d}".format(t) + '.jpeg'), rgb2bgr(tensor2im(fakes[t])))
             im = resize_img_cv2(cv2.imread(img_name), self._opt.resolution)
+            
             mask = np.reshape(tensor2im(masks[t],unnormalize=False), self._opt.resolution) 
             ret, bin_mask = cv2.threshold(mask, 120, 255, cv2.THRESH_BINARY)
+            num_examples = 1
+            if self._opt.use_moments:
+                with torch.no_grad():
+                    momento = torch.zeros(224,416)
+                    variable_auxiliar = torch.zeros(num_examples,64)
+                    contador = 0
+                    idxs_nz = torch.nonzero(torch.from_numpy(bin_mask[:,:]))
+                    
+                    # idxs_nz es relaciona amb llista_dim_v perque lelement 
+                    llista_dim_v = [] # llista amb dim_v - 1 candidats, cada element es torch.tensor(2144,64)
+                    for p in range(idxs_nz.size()[0]):
+                        if(contador == num_examples):
+                            contador = 0
+                            llista_dim_v.append(variable_auxiliar)
+                            variable_auxiliar = torch.zeros(num_examples,64)
+                        elif contador < num_examples:
+                            variable_auxiliar[contador,:] = feature[:,:,idxs_nz[p][0],idxs_nz[p][1]]                        
+                            contador = contador + 1
+                    for elem_i, elem in enumerate(llista_dim_v):
+                        elem = elem.cuda()
+                        print("UEPA")
+                        wa = mom(elem)
+                        predictions_out = torch.ge(wa,2145).view(num_examples)
+                        for pre_i in range(predictions_out.size()[0]):
+                            if predictions_out[pre_i]:
+                                bin_mask[idxs_nz[int(elem_i*num_examples + pre_i)][0],idxs_nz[int(elem_i*num_examples+pre_i)][1]] = 0
+
+   
+
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'mask_debug_'+ "{:02d}".format(t) + '.jpeg'), bin_mask)
             # Draw contours:
             image, contours, hierarchy = cv2.findContours(bin_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
