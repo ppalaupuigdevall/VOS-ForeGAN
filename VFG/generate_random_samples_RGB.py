@@ -9,6 +9,11 @@ import numpy as np
 import torch
 from SOS.Q import Q_real_M
 import pandas as pd
+
+
+"""
+python VFG/generate_random_samples_RGB.py --model forestgan_rnn_v1_antic --name experiment_v1 --load_epoch 4500 --use_moments True
+"""
 class Test:
     def __init__(self):
         self._opt = TestOptions().parse()
