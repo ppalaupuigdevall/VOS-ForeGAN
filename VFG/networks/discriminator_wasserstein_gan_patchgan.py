@@ -40,6 +40,39 @@ class Discriminator(NetworkBase):
         out_real = self.conv3(h)
         return out_real
 
+class Discriminator_G(NetworkBase):
+    """Discriminator. PatchGAN."""
+    def __init__(self, image_size=224, conv_dim=64, repeat_num=6):
+        super(Discriminator_G, self).__init__()
+        self._name = 'discriminator_wgan_G'
+
+        layers = []
+        layers.append(nn.Conv2d(3, conv_dim, kernel_size=4, stride=2, padding=1))
+        layers.append(nn.LeakyReLU(0.01, inplace=True))
+
+        curr_dim = conv_dim
+        for i in range(1, repeat_num):
+            layers.append(nn.Conv2d(curr_dim, curr_dim*2, kernel_size=4, stride=2, padding=1))
+            layers.append(nn.LeakyReLU(0.01, inplace=True))
+            curr_dim = curr_dim * 2
+
+        k_size = int(image_size / np.power(2, repeat_num))
+        self.main = nn.Sequential(*layers)
+        self.conv1_fg = nn.Conv2d(curr_dim, 1, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv1_mask = nn.Conv2d(curr_dim, 1, kernel_size=3, stride=1, padding=1, bias=False)
+
+    def forward(self, x, is_fg):
+        
+        if is_fg:
+            h = self.main(x)
+            out_real = self.conv1_fg(h)
+        else:
+            x = x.expand(1,3,224,416)            
+            h = self.main(x)
+            out_real = self.conv1_mask(h)
+        return out_real.squeeze()
+
+
 class Discriminator_M(NetworkBase):
     """Discriminator. PatchGAN. Processes patches independently
         Inputs are (B, Nx, Ny, 3, Hp, Wp) --> (B*Nx*Ny, 3, Hp, Wp)
@@ -62,7 +95,6 @@ class Discriminator_M(NetworkBase):
             curr_dim = curr_dim * 2
 
         self.main = nn.Sequential(*layers)
-        
         self.conv1 = nn.Sequential(*[nn.Conv2d(curr_dim, curr_dim * 2, kernel_size=(2,4), stride=(1,1), padding=(0,0), bias=False), nn.LeakyReLU(0.01, inplace=True)])
         
         curr_dim = curr_dim * 2
@@ -79,7 +111,7 @@ class Discriminator_M(NetworkBase):
             h = self.conv2(h)
             out_real = self.conv3(h)
         else:
-            x = x.expand(3,3,224,416)
+            x = x.expand(1,3,224,416)
             # is mask
             h = self.main(x)
             h = self.conv1(h)

@@ -13,7 +13,7 @@ import pandas as pd
 from data.dataset_davis import tensor2im, resize_img_cv2
 import numpy as np
 import cv2
-
+import torch
 class Validate:
     def __init__(self):
         self._opt = TestOptions().parse()
@@ -47,7 +47,7 @@ class Validate:
                 if(t<self._training_T-1):
                     l1_batch = l1_batch + self._l1_criterion(val_batch['imgs'][t+1].cuda(), fakes[t]).item()
             J_val_set = J_val_set + j_batch/(self._opt.T - 1)
-            Boundary = Boundary + boundary_batch/(self._opt.T - 1)
+            # Boundary = Boundary + boundary_batch/(self._opt.T - 1)
             L1 = l1_batch + l1_batch/(self._training_T-1)
         
         metric = {'iteracio':iteracio, 'j':J_val_set/self._dataset_train_size, 'b':Boundary/self._dataset_train_size, 'l1':L1/self._dataset_train_size}
@@ -94,11 +94,11 @@ class Validate:
                 fgs, bgs, fakes, masks = self._model.forward(self._opt.T)
                 
                 for t in range(self._opt.T-period):
+                    # for thr in [190,200,210]:
+
                     bin_mask = self.binarize_mask(tensor2im(masks[t],unnormalize=False), 200)
                     # Jaccard Index
                     j_batch[t//(self._training_T-1)] = j_batch[t//(self._training_T-1)] + db_eval_iou(tensor2im(val_batch['gt_masks'][t+1], unnormalize=False), bin_mask)
-                    # Boundary Index
-                    # boundary_batch = boundary_batch + db_eval_boundary(bin_mask, tensor2im(val_batch['gt_masks'][t+1]))
                     # L1 fg
                     diff_fgs = self._l1_criterion(val_batch['imgs'][t+1].cuda() * val_batch['gt_masks'][t+1].cuda(), fgs[t]*masks[t])
                     l1_fg[t//(self._training_T-1)] = l1_fg[t//(self._training_T-1)] + diff_fgs.cpu().item()
@@ -125,6 +125,49 @@ class Validate:
                 mets.append(metric)
         return mets
 
+    def _validation_batch_for_each_t(self,iteracio):
+        
+        period = 4 # Evaluation until 4T
+        n_digits = 4
+        mets = [] # mets of all batches
+        num_frames_eval = self._opt.T - period
+        for i_val_batch, val_batch in enumerate(self._data_loader_train):
+            mets_batch = []
+            print(i_val_batch/self._dataset_train_size)
+            video_name = val_batch["video_name"][0]
+            if len(val_batch['gt_masks'])>=self._opt.T:
+                j_batch, boundary_batch, l1_batch, l1_fg = np.zeros((4,num_frames_eval)), np.zeros((num_frames_eval)), np.zeros((num_frames_eval)), np.zeros((num_frames_eval))                
+                self._model.set_input(val_batch)
+                fgs, bgs, fakes, masks = self._model.forward(self._opt.T)
+                for t in range(self._opt.T-period):
+                    diff_fgs = self._l1_criterion(val_batch['imgs'][t+1].cuda() * val_batch['gt_masks'][t+1].cuda(), fgs[t])
+                    l1_fg[t] = np.round(diff_fgs.cpu().item(), n_digits)
+                    if t<self._training_T-1:
+                        wa = self._l1_criterion(val_batch['imgs'][t+1].cuda(), fakes[t]).item()
+                        l1_batch[t] = np.round(wa,n_digits)
+                    for i_thr, thr in enumerate([180,190,200,210]):
+                        bin_mask = self.binarize_mask(tensor2im(masks[t],unnormalize=False), thr)
+                        wae = db_eval_iou(tensor2im(val_batch['gt_masks'][t+1], unnormalize=False), bin_mask)
+                        j_batch[i_thr, t] = np.round(wae, n_digits)
+                        # Create row of dataframe 
+                        to_print = 'T'
+                        current_period = t//(self._training_T-1)    
+                        if current_period>0:    
+                            to_print = str(current_period) + to_print
+                        metric = {}
+                        metric['iteracio'] = iteracio
+                        metric['video_name'] = video_name
+                        metric['t'] = t
+                        metric['thr'] = thr
+                        metric['J'] = j_batch[i_thr, t]
+                        metric['L1_fg'] = l1_fg[t]
+                        metric['L1'] = l1_batch[t]
+                        metric['period'] = to_print
+                        mets_batch.append(metric)
+                mets.extend(mets_batch)   
+        return mets
+
+
     def _validate_batch(self):
         def what_is_what(s):
             """X_epoch_Y_id_Z.pth, X:net/opt, Y:int, Z:Gf/Gb/Df/Db"""
@@ -140,11 +183,11 @@ class Validate:
         for e in epochs:
             print("New Epoch ", str(e))
             self._model.load_val(str(e))
-            m = self._validation_batch(e)
+            m = self._validation_batch_for_each_t(e)
             print("metrics: ", m)
             self._metrics.extend(m)
             df = pd.DataFrame(self._metrics)
-            df.to_csv(os.path.join(self._opt.save_path, self._opt.name, 'metrics_timesteps_200.csv'))
+            df.to_csv(os.path.join(self._opt.save_path, self._opt.name, self._opt.name+"metrics.csv"))
             
     def _save_masks(self):
         def what_is_what(s):

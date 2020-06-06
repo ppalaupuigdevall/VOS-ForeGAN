@@ -143,6 +143,7 @@ class BaseModel(object):
     def _load_network(self, network, network_label, epoch_label):
         load_filename = 'net_epoch_%s_id_%s.pth' % (epoch_label, network_label)
         load_path = os.path.join(self._save_dir, load_filename)
+        print(load_path)
         # load_path=None
         # load_path = os.path.join('/data/Ponc/VOS-ForeGAN/experiment_13/',load_filename)
         # if((('Gb' in network_label) or ('Db' in network_label))):

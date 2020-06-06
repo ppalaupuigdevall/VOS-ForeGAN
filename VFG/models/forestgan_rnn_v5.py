@@ -298,7 +298,7 @@ class ForestGANRNN_v5(BaseModel):
             
 
     def _generate_fake_samples(self, t):
-        Inext_fake_fg, mask_next_fg = self._Gf(self._curr_f, self._curr_OFs.detach())
+        Inext_fake_fg, mask_next_fg = self._Gf(self._curr_f, self._curr_OFs)
         Inext_fake_bg = self._Gb(self._curr_b)
         Inext_fake = (1 - mask_next_fg) * Inext_fake_bg + Inext_fake_fg
         self._visual_masks.append(mask_next_fg)

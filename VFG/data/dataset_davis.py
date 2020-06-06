@@ -212,7 +212,7 @@ class ValDavisDataset(data.Dataset):
         self.resolution = (conf.resolution)
         self.T = T
         self.create_transform()
-    
+        self.my_cat = None
     def create_transform(self):
         transforms_list_img = [
             transforms.ToTensor(),
@@ -224,11 +224,10 @@ class ValDavisDataset(data.Dataset):
         self.transform_img = transforms.Compose(transforms_list_img)
         self.transform_flow = transforms.ToTensor()
 
-    def get_noms(self):
-        return self.imgs_by_cat['stroller']
-    
     def __getitem__(self, idx):
+        # Be Careful if num_workers > 1, won't work
         cat = self.categories[idx]
+        
         imgs_paths = self.imgs_by_cat[cat][0:self.T]
         imgs_paths = [os.path.join(self.img_dir, cat, x) for x in imgs_paths]
         OFs_paths = self.OFs_by_cat[cat][0:self.T]
@@ -295,6 +294,7 @@ class ValDavisDataset(data.Dataset):
         sample["mask_b"] = masked_img_bg # range -1,1
         sample["mask"] = self.transform_flow(mask_resized) # Mask goes from 0 to 1 so we just apply ToTensor() transform
         sample["gt_masks"] = gt_masks
+        sample["video_name"] = cat
         return sample
 
     def __len__(self):
