@@ -10,7 +10,6 @@ import torch
 from SOS.Q import Q_real_M
 import pandas as pd
 
-
 """
 python VFG/generate_random_samples_RGB.py --model forestgan_rnn_v1_antic --name experiment_v1 --load_epoch 4500 --use_moments True
 """
@@ -44,8 +43,10 @@ class Test:
             im = resize_img_cv2(cv2.imread(img_name), self._opt.resolution)
             mask = np.reshape(tensor2im(masks[t],unnormalize=False), self._opt.resolution) 
             ret, bin_mask = cv2.threshold(mask, 120, 255, cv2.THRESH_BINARY)
+
             bin_mask_discarded = np.zeros((224,416,3),dtype=np.uint8)
             bin_mask_discarded[:,:,0] = bin_mask.copy()
+            cv2.imwrite(os.path.join(self._opt.test_dir_save,'mask_before_moments_'+ "{:02d}".format(t) + '.jpeg'), bin_mask)
             if self._opt.use_moments and t==0:
                 img_name_0 = os.path.join(self._dataset_test.img_dir,cat, imgs[0])
                 
