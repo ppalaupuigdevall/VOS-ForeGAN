@@ -286,7 +286,7 @@ class ForestGANRNN_extended_feat(BaseModel):
             self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, False) * self._opt.lambda_Gf_prob_mask
             
             # Fake bgs
-            patches_Inext_bg = self._extract_img_patches_mask_sampled(Inext_fake_bg)
+            patches_Inext_bg = self._extract_img_patches(Inext_fake_bg)
 
             d_fake_bg = self._Db(patches_Inext_bg)
             self._loss_g_bg = self._loss_g_bg + self._compute_loss_D(d_fake_bg, False) * self._opt.lambda_Gb_prob
@@ -384,7 +384,7 @@ class ForestGANRNN_extended_feat(BaseModel):
             real_samples_bg.append(paches_bg_real)
             d_real_bg = self._Db(paches_bg_real)
             self._loss_db_real = self._loss_db_real + self._compute_loss_D(d_real_bg, True) * self._opt.lambda_Db_prob
-            patches_bg_fake = self._extract_img_patches_mask_sampled(Inext_fake_bg)
+            patches_bg_fake = self._extract_img_patches(Inext_fake_bg)
             fake_samples_bg.append(patches_bg_fake)
             d_fake_bg = self._Db(patches_bg_fake)
             self._loss_db_fake = self._loss_db_fake + self._compute_loss_D(d_fake_bg, False) * self._opt.lambda_Db_prob

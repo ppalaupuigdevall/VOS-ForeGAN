@@ -23,6 +23,9 @@ class NetworksFactory:
         elif network_name == 'discriminator_wasserstein_gan_M':
             from networks.discriminator_wasserstein_gan_patchgan import Discriminator_M
             network = Discriminator_M(*args, **kwargs)
+        elif network_name == 'discriminator_wgan_Ga':
+            from networks.discriminator_wasserstein_gan_patchgan import Discriminator_Ga
+            network = Discriminator_Ga(*args, **kwargs)
         elif network_name == 'generator_wasserstein_gan_b_static_ACR':
             from networks.generator_wasserstein_gan import GeneratorB_static_ACR
             network = GeneratorB_static_ACR(*args, **kwargs)
@@ -32,6 +35,9 @@ class NetworksFactory:
         elif network_name == 'generator_wasserstein_gan_f_static_ACR':
             from networks.generator_wasserstein_gan import GeneratorF_static_ACR
             network = GeneratorF_static_ACR(*args, **kwargs)
+        elif network_name == 'generator_wasserstein_gan_f_static_ACR_v1_dark':
+            from networks.generator_wasserstein_gan import GeneratorF_static_ACR_v1_dark
+            network = GeneratorF_static_ACR_v1_dark(*args, **kwargs)
         
         elif network_name == 'generator_wasserstein_gan_f_static_ACR_v1':
             from networks.generator_wasserstein_gan import GeneratorF_static_ACR_v1

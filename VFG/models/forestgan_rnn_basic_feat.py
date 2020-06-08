@@ -47,14 +47,14 @@ class ForestGANRNN_basic_feat(BaseModel):
             # self._transformed_mask = sample['transformed_mask']
         self._move_inputs_to_gpu(0)
 
-        kh, kw, stride_h, stride_w = self._opt.kh, self._opt.kw, self._opt.stride_h, self._opt.stride_w
-        kernel = torch.ones(1,3,kh,kw)
-        output = F.conv2d(sample['mask'], kernel, stride=(stride_h,stride_w))
-        convsize = output.size()[-1]
-        indexes = torch.ge(output, 0.001)
-        nonzero = torch.nonzero(indexes[0,0,:,:])
-        self._num_of_nonzero_patches = nonzero.size()[0]
-        self._nonzero = nonzero
+        # kh, kw, stride_h, stride_w = self._opt.kh, self._opt.kw, self._opt.stride_h, self._opt.stride_w
+        # kernel = torch.ones(1,3,kh,kw)
+        # output = F.conv2d(sample['mask'], kernel, stride=(stride_h,stride_w))
+        # convsize = output.size()[-1]
+        # indexes = torch.ge(output, 0.001)
+        # nonzero = torch.nonzero(indexes[0,0,:,:])
+        # self._num_of_nonzero_patches = nonzero.size()[0]
+        # self._nonzero = nonzero
         
     def _move_inputs_to_gpu(self, t):
         if(t==0):

@@ -25,6 +25,9 @@ class ModelsFactory:
         elif model_name == 'forestgan_rnn_v5':
             from models.forestgan_rnn_v5 import ForestGANRNN_v5
             model = ForestGANRNN_v5(*args, **kwargs)
+        elif model_name == 'forestgan_rnn_v7':
+            from models.forestgan_rnn_v7 import ForestGANRNN_v7
+            model = ForestGANRNN_v7(*args, **kwargs)
         elif model_name == 'forestgan_rnn_v02':
             from models.forestgan_rnn_v02 import ForestGANRNN_v02
             model = ForestGANRNN_v02(*args, **kwargs)
@@ -121,14 +124,14 @@ class BaseModel(object):
         torch.save(optimizer.state_dict(), save_path)
 
     def _load_optimizer(self, optimizer, optimizer_label, epoch_label):
-        # load_filename = 'opt_epoch_%s_id_%s.pth' % (epoch_label, optimizer_label)
+        load_filename = 'opt_epoch_%s_id_%s.pth' % (epoch_label, optimizer_label)
        
-        # load_path = os.path.join(self._save_dir, load_filename)
-        load_path=None
+        load_path = os.path.join(self._save_dir, load_filename)
+        # load_path=None
         # load_path = os.path.join('/data/Ponc/VOS-ForeGAN/experiment_13/',load_filename)
-        if((('Gb' in optimizer_label) or ('Db' in optimizer_label))):
-            load_filename = 'opt_epoch_1050_id_'+str(optimizer_label)+'.pth'
-            load_path = os.path.join('/data/Ponc/VOS-ForeGAN/experiment_v031/',load_filename)
+        # if((('Gb' in optimizer_label) or ('Db' in optimizer_label))):
+        #     load_filename = 'opt_epoch_1050_id_'+str(optimizer_label)+'.pth'
+        #     load_path = os.path.join('/data/Ponc/VOS-ForeGAN/experiment_v031/',load_filename)
         assert os.path.exists(load_path), 'Weights file not found. ' % load_path
 
         optimizer.load_state_dict(torch.load(load_path, map_location=lambda storage, loc: storage))

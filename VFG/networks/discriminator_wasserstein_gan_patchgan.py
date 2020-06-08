@@ -40,11 +40,11 @@ class Discriminator(NetworkBase):
         out_real = self.conv3(h)
         return out_real
 
-class Discriminator_G(NetworkBase):
+class Discriminator_Ga(NetworkBase):
     """Discriminator. PatchGAN."""
     def __init__(self, image_size=224, conv_dim=64, repeat_num=6):
-        super(Discriminator_G, self).__init__()
-        self._name = 'discriminator_wgan_G'
+        super(Discriminator_Ga, self).__init__()
+        self._name = 'discriminator_wgan_Ga'
 
         layers = []
         layers.append(nn.Conv2d(3, conv_dim, kernel_size=4, stride=2, padding=1))

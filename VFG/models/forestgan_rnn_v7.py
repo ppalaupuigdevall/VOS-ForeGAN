@@ -48,14 +48,14 @@ class ForestGANRNN_v7(BaseModel):
             self._transformed_fg = sample['transformed_fg']
         self._move_inputs_to_gpu(0)
 
-        kh, kw, stride_h, stride_w = self._opt.kh, self._opt.kw, self._opt.stride_h, self._opt.stride_w
-        kernel = torch.ones(1,3,kh,kw)
-        output = F.conv2d(sample['mask'], kernel, stride=(stride_h,stride_w))
-        convsize = output.size()[-1]
-        indexes = torch.ge(output, 0.001)
-        nonzero = torch.nonzero(indexes[0,0,:,:])
-        self._num_of_nonzero_patches = nonzero.size()[0]
-        self._nonzero = nonzero
+        # kh, kw, stride_h, stride_w = self._opt.kh, self._opt.kw, self._opt.stride_h, self._opt.stride_w
+        # kernel = torch.ones(1,3,kh,kw)
+        # output = F.conv2d(sample['mask'], kernel, stride=(stride_h,stride_w))
+        # convsize = output.size()[-1]
+        # indexes = torch.ge(output, 0.001)
+        # nonzero = torch.nonzero(indexes[0,0,:,:])
+        # self._num_of_nonzero_patches = nonzero.size()[0]
+        # self._nonzero = nonzero
         
     def _move_inputs_to_gpu(self, t):
         if(t==0):
@@ -161,13 +161,13 @@ class ForestGANRNN_v7(BaseModel):
             self._Db.cuda()
 
     def _create_generator_f(self):
-        return NetworksFactory.get_by_name('generator_wasserstein_gan_f', c_dim=self._extra_ch_Gf, T=self._opt.T)
+        return NetworksFactory.get_by_name('generator_wasserstein_gan_f_static_ACR_v1_dark', c_dim=self._extra_ch_Gf, T=self._opt.T)
 
     def _create_generator_b(self):
         return NetworksFactory.get_by_name('generator_wasserstein_gan_b_static_ACR', c_dim=self._extra_ch_Gb, T=self._opt.T)
 
     def _create_discriminator_f(self):
-        return NetworksFactory.get_by_name('discriminator_wasserstein_gan_M')
+        return NetworksFactory.get_by_name('discriminator_wgan_Ga')
     
     def _create_discriminator_b(self):
         return NetworksFactory.get_by_name('discriminator_wasserstein_gan')
@@ -286,7 +286,7 @@ class ForestGANRNN_v7(BaseModel):
             self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, False) * self._opt.lambda_Gf_prob_mask
             
             # Fake bgs
-            patches_Inext_bg = self._extract_img_patches_mask_sampled(Inext_fake_bg)
+            patches_Inext_bg = self._extract_img_patches(Inext_fake_bg)
 
             d_fake_bg = self._Db(patches_Inext_bg)
             self._loss_g_bg = self._loss_g_bg + self._compute_loss_D(d_fake_bg, False) * self._opt.lambda_Gb_prob
@@ -384,7 +384,7 @@ class ForestGANRNN_v7(BaseModel):
             real_samples_bg.append(paches_bg_real)
             d_real_bg = self._Db(paches_bg_real)
             self._loss_db_real = self._loss_db_real + self._compute_loss_D(d_real_bg, True) * self._opt.lambda_Db_prob
-            patches_bg_fake = self._extract_img_patches_mask_sampled(Inext_fake_bg)
+            patches_bg_fake = self._extract_img_patches(Inext_fake_bg)
             fake_samples_bg.append(patches_bg_fake)
             d_fake_bg = self._Db(patches_bg_fake)
             self._loss_db_fake = self._loss_db_fake + self._compute_loss_D(d_fake_bg, False) * self._opt.lambda_Db_prob

@@ -136,7 +136,7 @@ class Validate:
             print(i_val_batch/self._dataset_train_size)
             video_name = val_batch["video_name"][0]
             if len(val_batch['gt_masks'])>=self._opt.T:
-                j_batch, boundary_batch, l1_batch, l1_fg = np.zeros((4,num_frames_eval)), np.zeros((num_frames_eval)), np.zeros((num_frames_eval)), np.zeros((num_frames_eval))                
+                j_batch, boundary_batch, l1_batch, l1_fg = np.zeros((6,num_frames_eval)), np.zeros((num_frames_eval)), np.zeros((num_frames_eval)), np.zeros((num_frames_eval))                
                 self._model.set_input(val_batch)
                 fgs, bgs, fakes, masks = self._model.forward(self._opt.T)
                 for t in range(self._opt.T-period):
@@ -145,7 +145,7 @@ class Validate:
                     if t<self._training_T-1:
                         wa = self._l1_criterion(val_batch['imgs'][t+1].cuda(), fakes[t]).item()
                         l1_batch[t] = np.round(wa,n_digits)
-                    for i_thr, thr in enumerate([180,190,200,210]):
+                    for i_thr, thr in enumerate([1,128,180,190,200,210]):
                         bin_mask = self.binarize_mask(tensor2im(masks[t],unnormalize=False), thr)
                         wae = db_eval_iou(tensor2im(val_batch['gt_masks'][t+1], unnormalize=False), bin_mask)
                         j_batch[i_thr, t] = np.round(wae, n_digits)
