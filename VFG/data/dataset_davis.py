@@ -73,7 +73,7 @@ class DavisDataset(data.Dataset):
         self.OF_dir = OF_dir
         self.mask_dir = conf.mask_dir
         self.categories = os.listdir(self.OF_dir)
-        self.categories = ['bmx-bumps']
+        # self.categories = ['bmx-bumps']
         self.num_categories = len(self.categories)
         self.imgs_by_cat, self.OFs_by_cat, self.masks_by_cat = {}, {}, {}
         for cat in self.categories:

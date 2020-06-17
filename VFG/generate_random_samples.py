@@ -20,7 +20,7 @@ class Test:
         for i_test_batch, test_batch in enumerate(self._data_loader_test):
             self._model.set_input(test_batch)
             if self._opt.use_moments:
-                fgs, bgs, fakes, masks, features = self._model.forward(self._opt.T)
+                fgs, bgs, fakes, masks = self._model.forward(self._opt.T)
                 feature = features[0]
                 gt_mask = test_batch['mask'][0,:,:,:]
                 
@@ -84,8 +84,8 @@ class Test:
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'bg_'+ "{:02d}".format(t) + '.jpeg'), rgb2bgr(tensor2im(bgs[t])))
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'fake_'+ "{:02d}".format(t) + '.jpeg'), rgb2bgr(tensor2im(fakes[t])))
             im = resize_img_cv2(cv2.imread(img_name), self._opt.resolution)
-            mask = np.reshape(tensor2im(masks[t]), self._opt.resolution) 
-            ret, bin_mask = cv2.threshold(mask, 130, 255, cv2.THRESH_BINARY)
+            mask = np.reshape(tensor2im(masks[t],unnormalize=False), self._opt.resolution) 
+            ret, bin_mask = cv2.threshold(mask, 75, 255, cv2.THRESH_BINARY)
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'mask_debug_'+ "{:02d}".format(t) + '.jpeg'), bin_mask)
             # Draw contours:
             image, contours, hierarchy = cv2.findContours(bin_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)

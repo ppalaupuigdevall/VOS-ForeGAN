@@ -24,7 +24,7 @@ class Test:
     def _generate_something(self):
         for i_test_batch, test_batch in enumerate(self._data_loader_test):
             self._model.set_input(test_batch)
-            fgs, bgs, fakes, masks= self._model.forward(self._opt.T)
+            fgs, bgs, fakes, masks,f = self._model.forward(self._opt.T)
             break
         def rgb2bgr(img):
             return cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
@@ -42,7 +42,7 @@ class Test:
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'fake_'+ "{:02d}".format(t) + '.jpeg'), rgb2bgr(tensor2im(fakes[t])))
             im = resize_img_cv2(cv2.imread(img_name), self._opt.resolution)
             mask = np.reshape(tensor2im(masks[t],unnormalize=False), self._opt.resolution) 
-            ret, bin_mask = cv2.threshold(mask, 75, 255, cv2.THRESH_BINARY)
+            ret, bin_mask = cv2.threshold(mask, 120, 255, cv2.THRESH_BINARY)
 
             bin_mask_discarded = np.zeros((224,416,3),dtype=np.uint8)
             bin_mask_discarded[:,:,0] = bin_mask.copy()
@@ -51,8 +51,7 @@ class Test:
                 img_0 = test_batch['imgs'][0][0]
                 gt_mask = test_batch['mask'][0,:,:,:]
                 mom = Q_real_M(3,3)
-                num_examples = 1
-                variable_auxiliar = torch.zeros(num_examples,3)
+                num_examples = 8
                 idxs_nz = torch.nonzero(gt_mask[0,:,:])
                 num_cops = self._opt.resolution[0]
                 img_0 = torch.as_tensor(img_0, dtype=torch.float32) # numpy
@@ -61,7 +60,7 @@ class Test:
                 mom.set_build_M()
             
             
-            num_examples = 1
+            num_examples = 8
             if self._opt.use_moments:
                 with torch.no_grad():
                     momento = torch.zeros(224,416)
@@ -70,10 +69,10 @@ class Test:
                     for p in range(idxs_nz.size()[0]):
                         img_t = test_batch['imgs'][t+1][0]
                         variable_auxiliar[p,:] = img_t[:,idxs_nz[p][0],idxs_nz[p][1]]# numpy
-                    for elem_i in range(idxs_nz.size()[0]):
-                        elem = variable_auxiliar[elem_i,:].unsqueeze(0)                     
+                    for elem_i in range(int(idxs_nz.size()[0]//num_examples)):
+                        elem = variable_auxiliar[elem_i*num_examples:elem_i*num_examples+num_examples,:].unsqueeze(0)                     
                         elem = elem.cuda()
-                        wa = mom(elem)
+                        wa = mom(elem.view(num_examples,3))
                         predictions_out = torch.ge(wa,10).view(num_examples)
                         for pre_i in range(predictions_out.size()[0]):
                             if predictions_out[pre_i]:

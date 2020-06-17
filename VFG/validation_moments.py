@@ -75,6 +75,7 @@ class Validate:
             self._metrics.append(m)
             df = pd.DataFrame(self._metrics)
             df.to_csv(os.path.join(self._opt.save_path, self._opt.name, 'metrics.csv'))
+            
 
     def _validation_batch(self,iteracio):
         
@@ -125,7 +126,7 @@ class Validate:
                 mets.append(metric)
         return mets
 
-    def _validation_batch_for_each_t(self,iteracio):
+    def _validation_batch_for_each_t(self,iteracio,mom):
         
         period = 4 # Evaluation until 4T
         n_digits = 4
@@ -135,19 +136,64 @@ class Validate:
         for i_val_batch, val_batch in enumerate(self._data_loader_train):
             mets_batch = []
             print(i_val_batch/self._dataset_train_size)
+            print(iteracio)
             video_name = val_batch["video_name"][0]
+            print(video_name)
             if len(val_batch['gt_masks'])>=(self._opt.T-5):
-                j_batch, boundary_batch, l1_batch, l1_fg = np.zeros((19,num_frames_eval)), np.zeros((num_frames_eval)), np.zeros((num_frames_eval)), np.zeros((num_frames_eval))                
+                j_batch, boundary_batch, l1_batch, l1_fg = np.zeros((1,num_frames_eval)), np.zeros((num_frames_eval)), np.zeros((num_frames_eval)), np.zeros((num_frames_eval))                
                 self._model.set_input(val_batch)
                 fgs, bgs, fakes, masks = self._model.forward(self._opt.T)
+                print("Inference done")
+                print(iteracio)
+                
+                if(int(iteracio)==7000):
+                    # Build moment matrix
+                    print("iteracio 0")
+                    if self._opt.use_moments:
+                        print("Using moments")
+                        print("cat : ", video_name)
+                        img_0 = val_batch['imgs'][0][0]
+                        gt_mask = val_batch['mask'][0,:,:,:]
+                        num_examples = 1
+                        variable_auxiliar = torch.zeros(num_examples,3)
+                        idxs_nz = torch.nonzero(gt_mask[0,:,:])
+                        num_cops = self._opt.resolution[0]
+                        img_0 = torch.as_tensor(img_0, dtype=torch.float32) # numpy
+                        for p in range(idxs_nz.size()[0]):
+                            _ = mom(img_0[:,idxs_nz[p][0],idxs_nz[p][1]].view(1,3).cuda(),video_name) # torch
+                        mom.set_build_M()
+               
                 for t in range(self._opt.T-period):
+                    print(t)
                     diff_fgs = self._l1_criterion(val_batch['imgs'][t+1].cuda() * val_batch['gt_masks'][t+1].cuda(), fgs[t])
                     l1_fg[t] = np.round(diff_fgs.cpu().item(), n_digits)
                     if t<self._training_T-1:
                         wa = self._l1_criterion(val_batch['imgs'][t+1].cuda(), fakes[t]).item()
                         l1_batch[t] = np.round(wa,n_digits)
-                    for i_thr, thr in enumerate([1,5,15,25,35,45,55,65,75,85,95,105,115,128,138,180,190,200,210]):
+                    for i_thr, thr in enumerate([85]):
                         bin_mask = self.binarize_mask(tensor2im(masks[t],unnormalize=False), thr)
+                        if self._opt.use_moments and int(iteracio)==7000:
+                            print("Collonae")
+                            print(video_name)
+                            with torch.no_grad():      
+                                num_examples = 1           
+                                idxs_nz = torch.nonzero(torch.from_numpy(bin_mask[:,:]))
+                                variable_auxiliar = torch.zeros(idxs_nz.size()[0],3)
+                                num_nonzeros = idxs_nz.size()[0]
+                                img_t = val_batch['imgs'][t+1][0]
+                                for p in range(idxs_nz.size()[0]):
+                                    variable_auxiliar[p,:] = img_t[:,idxs_nz[p][0],idxs_nz[p][1]]
+                                for elem_i in range(idxs_nz.size()[0]):
+                                    elem = variable_auxiliar[elem_i,:].unsqueeze(0)                                                   
+                                    elem = elem.cuda()
+                                    wa = mom(elem,video_name)
+                                    # print(wa)
+                                    predictions_out = torch.ge(wa,10).view(num_examples)
+                                    # predictions_out = torch.ge(wa,10)
+                                    for pre_i in range(predictions_out.size()[0]):
+                                        if predictions_out[pre_i]:
+                                            bin_mask[idxs_nz[int(elem_i*num_examples + pre_i)][0],idxs_nz[int(elem_i*num_examples+pre_i)][1]] = 0
+                        print("collonae")
                         wae = db_eval_iou(tensor2im(val_batch['gt_masks'][t+1], unnormalize=False), bin_mask)
                         j_batch[i_thr, t] = np.round(wae, n_digits)
                         # Create row of dataframe 
@@ -181,15 +227,16 @@ class Validate:
                 X,Y,Z = what_is_what(filename)
                 if( ('net' in X) and ('Gf' in Z) ):
                     epochs.append(Y)
-
+        mom = Q_real_M_cat(3,3)
         for e in epochs:
-            print("New Epoch ", str(e))
-            self._model.load_val(str(e))
-            m = self._validation_batch_for_each_t(e)
-            print("metrics: ", m)
-            self._metrics.extend(m)
-            df = pd.DataFrame(self._metrics)
-            df.to_csv(os.path.join(self._opt.save_path, self._opt.name, self._opt.name+"metrics_validation.csv"))
+            if int(e) == 7000:
+                print("New Epoch ", str(e))
+                self._model.load_val(str(e))
+                m = self._validation_batch_for_each_t(e,mom)
+                print("metrics: ", m)
+                self._metrics.extend(m)
+                df = pd.DataFrame(self._metrics)
+                df.to_csv(os.path.join(self._opt.save_path, self._opt.name, self._opt.name+"metrics_training_moments.csv"))
                 
     def _save_masks(self):
         def what_is_what(s):
@@ -216,6 +263,7 @@ class Validate:
         self._model.set_input(val_batch)
         fgs, bgs, fakes, masks = self._model.forward(self._opt.T)
         cat = 'stroller'
+        print("uepa")
         for t in range(self._opt.T-period):
             print(t)
             if t%(self._training_T-1) == (self._training_T-2):
@@ -234,6 +282,7 @@ class Validate:
                 cv2.imwrite(os.path.join(self._opt.save_path,self._opt.name,'masks','a_mask_T' +"{:04d}".format(t)+'_'+ "{:04d}".format(int(iteracio)) + '.jpeg'), im)
         
         return ""
+
 
     def binarize_mask(self,maska, th=210): 
         ret, bin_mask = cv2.threshold(maska, th, 255, cv2.THRESH_BINARY)

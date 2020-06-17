@@ -38,7 +38,9 @@ class NetworksFactory:
         elif network_name == 'generator_wasserstein_gan_f_static_ACR_v1_dark':
             from networks.generator_wasserstein_gan import GeneratorF_static_ACR_v1_dark
             network = GeneratorF_static_ACR_v1_dark(*args, **kwargs)
-        
+        elif network_name == 'generator_wasserstein_gan_f_static_ACR_v1_dark_m':
+            from networks.generator_wasserstein_gan import GeneratorF_static_ACR_v1_dark_m
+            network = GeneratorF_static_ACR_v1_dark_m(*args, **kwargs)
         elif network_name == 'generator_wasserstein_gan_f_static_ACR_v1':
             from networks.generator_wasserstein_gan import GeneratorF_static_ACR_v1
             network = GeneratorF_static_ACR_v1(*args, **kwargs)

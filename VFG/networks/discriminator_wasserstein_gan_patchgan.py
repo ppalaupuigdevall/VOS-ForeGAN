@@ -67,7 +67,8 @@ class Discriminator_Ga(NetworkBase):
             h = self.main(x)
             out_real = self.conv1_fg(h)
         else:
-            x = x.expand(1,3,224,416)            
+            x = x.expand(1,3,224,416) #bs 1
+            # x = x.expand(2,3,224,416) #bs 2
             h = self.main(x)
             out_real = self.conv1_mask(h)
         return out_real.squeeze()

@@ -262,6 +262,105 @@ class Q_real_M(nn.Module):
         self.build_M = True
         self.create_M()
 
+class Q_real_M_cat(nn.Module):
+    """
+    This module is in charge of 
+        1. Building a moment matrix with the training samples (INLIERS)
+            2. Applying the inverse of the empirically built moment matrix to discriminate outliers/inliers
+    
+    Basically, M = sum{v(x)*v.T(x)}
+    Then applies M_inv:
+
+                v(x).T * M_inv * v(x)
+    """
+    def __init__(self, x_size, n):
+        """
+        x_size = vector_size, [x1 x2 ... xd]
+        n = moment degree up to n
+        """
+        super(Q_real_M_cat, self).__init__()
+        self.n = n
+        self.dim_veronese = int(comb(x_size + n, n))
+        self.veroneses = {}
+        self.has_M_inv = {}
+        self.M_inv = None
+        self.build_M = True # Will be true when the autoencoder gets good reconstruction
+        self.M_invs = {}
+
+    def forward(self, x, c):
+        if c not in self.veroneses.keys():
+            self.veroneses[c] = []
+            self.has_M_inv[c] = False
+        if((not self.has_M_inv[c]) and (self.build_M)):
+            # We want only veronese maps to build the moment matrix once we have good reconstruction (self.build_M = True) !
+            npoints, dims = x.size()
+            v_x, _ = generate_veronese(
+                x.view(dims, npoints).cuda(), self.n)
+            self.veroneses[c].append(v_x.cpu())
+        elif(self.has_M_inv[c]):
+            # Create the veronese map of z
+            npoints, dims = x.size()
+            # print("npoints = ",npoints, " dims = ",dims)
+            v_x, _ = generate_veronese(x.view(dims, npoints).cuda(), self.n)
+            
+            dim_veronese, BS = v_x.size()
+            # print("npoints = ",BS, " dims = ",dim_veronese)
+            # first = torch.matmul(v_x.view(BS,1,dim_veronese), self.M_inv)
+            # x = torch.matmul(first, v_x.view(BS, dim_veronese, 1))
+            # x = torch.matmul(
+            #     v_x.view(BS, 1, dim_veronese), torch.matmul(self.M_inv,
+            #     v_x.view(BS, dim_veronese, 1)))
+            
+            # BATCH version, be careful because it consumes a lot of gpu memory
+            x = torch.matmul(
+                v_x.view(BS, 1, dim_veronese), torch.matmul(torch.cat(BS*[self.M_invs[c]], dim=0),
+                v_x.view(BS, dim_veronese, 1)))
+            
+        return x
+
+    def create_M(self):
+        # This method should be created from outlise the class
+        for c in self.veroneses.keys():
+            print("creating M")
+            print(c)
+            with torch.no_grad():
+                n = len(self.veroneses[c])
+                d, bs = self.veroneses[c][0].size()
+                Mc = torch.tensor([])
+                for i in range(0,n):
+                    print(i/n)
+                    #V = torch.cat([V, self.veroneses[i+1]], dim=1)
+                    V = self.veroneses[c][i]
+                    A = self.veroneses[c][i]
+                    A = A.view(bs,d,1)
+                    B = self.veroneses[c][i]
+                    B = B.view(bs,1,d)
+                    Mc_m = torch.matmul(A, B)
+                    # Mc_m = torch.bmm(V.view(bs,d,1), V.view(bs,1,d))
+                    # print(Mc_m)
+                    Mc_m = torch.mean(Mc_m, dim=0)
+                    Mc = torch.cat([Mc,Mc_m.unsqueeze(0)])
+                    # print(Mc.size())
+                M = torch.mean(Mc,dim=0) + 0.0001 * torch.eye(d)
+                # M = torch.mean(Mc,dim=0)
+                # print(M.size())
+                # print("Moment matrix, should have hankel structure")
+                # print(M)
+                # U_m, S_m, V_m = torch.svd(M)
+                # print("singular values of M = ", S_m)
+                self.M_invs[c] = torch.inverse(M).cuda()
+                # print(self.M_inv)
+                # U,S,V = torch.svd(self.M_inv)
+                # print("Singular values of M_inv = ", S)
+        self.has_M_inv[c] = True
+        
+    def set_build_M(self):
+        # self.build_M = True
+        self.create_M()
+
+
+
+
 class Q_real_M_batches(nn.Module):
     """
     This module is in charge of 
