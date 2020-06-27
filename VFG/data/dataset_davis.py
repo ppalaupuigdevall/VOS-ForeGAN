@@ -73,7 +73,12 @@ class DavisDataset(data.Dataset):
         self.OF_dir = OF_dir
         self.mask_dir = conf.mask_dir
         self.categories = os.listdir(self.OF_dir)
-        # self.categories = ['bmx-bumps']
+        trainii = ['scooter-gray','soccerball','stroller','surf','swing','tennis','train']
+        valii = ['paragliding-launch','parkour','scooter-black','soapbox']
+        self.categories = ['soapbox']
+        # self.categories = ['elephant']
+        # self.categories = ['stroller']
+        
         self.num_categories = len(self.categories)
         self.imgs_by_cat, self.OFs_by_cat, self.masks_by_cat = {}, {}, {}
         for cat in self.categories:
@@ -203,8 +208,11 @@ class ValDavisDataset(data.Dataset):
         self.OF_dir = OF_dir
         self.mask_dir = conf.mask_dir
         self.categories = os.listdir(self.OF_dir)
-        idx_of_dogagility = self.categories.index('dog-agility')
-        del self.categories[idx_of_dogagility]
+        # only in training results
+        # idx_of_dogagility = self.categories.index('dog-agility')
+        # del self.categories[idx_of_dogagility]
+        # self.categories = ['bmx-bumps']
+        # self.categories = ['swing']
         self.num_categories = len(self.categories)
         self.imgs_by_cat, self.OFs_by_cat, self.masks_by_cat = {}, {}, {}
         for cat in self.categories:

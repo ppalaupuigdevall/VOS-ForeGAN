@@ -42,7 +42,7 @@ class Test:
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'fake_'+ "{:02d}".format(t) + '.jpeg'), rgb2bgr(tensor2im(fakes[t])))
             im = resize_img_cv2(cv2.imread(img_name), self._opt.resolution)
             mask = np.reshape(tensor2im(masks[t],unnormalize=False), self._opt.resolution) 
-            ret, bin_mask = cv2.threshold(mask, 75, 255, cv2.THRESH_BINARY)
+            ret, bin_mask = cv2.threshold(mask, 25, 255, cv2.THRESH_BINARY)
 
             bin_mask_discarded = np.zeros((224,416,3),dtype=np.uint8)
             bin_mask_discarded[:,:,0] = bin_mask.copy()

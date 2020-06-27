@@ -146,11 +146,11 @@ class Validate:
                 print("Inference done")
                 print(iteracio)
                 
-                if(int(iteracio)==7000):
+                if(int(iteracio)==5400):
                     # Build moment matrix
                     print("iteracio 0")
                     if self._opt.use_moments:
-                        print("Using moments")
+                        print("Creating moment matrix")
                         print("cat : ", video_name)
                         img_0 = val_batch['imgs'][0][0]
                         gt_mask = val_batch['mask'][0,:,:,:]
@@ -161,7 +161,7 @@ class Validate:
                         img_0 = torch.as_tensor(img_0, dtype=torch.float32) # numpy
                         for p in range(idxs_nz.size()[0]):
                             _ = mom(img_0[:,idxs_nz[p][0],idxs_nz[p][1]].view(1,3).cuda(),video_name) # torch
-                        mom.set_build_M()
+                        mom.set_build_M(video_name)
                
                 for t in range(self._opt.T-period):
                     print(t)
@@ -170,11 +170,11 @@ class Validate:
                     if t<self._training_T-1:
                         wa = self._l1_criterion(val_batch['imgs'][t+1].cuda(), fakes[t]).item()
                         l1_batch[t] = np.round(wa,n_digits)
-                    for i_thr, thr in enumerate([85]):
+                    for i_thr, thr in enumerate([50]):
                         bin_mask = self.binarize_mask(tensor2im(masks[t],unnormalize=False), thr)
-                        if self._opt.use_moments and int(iteracio)==7000:
-                            print("Collonae")
+                        if self._opt.use_moments and int(iteracio)==5400:
                             print(video_name)
+                            print("evaluating moments")
                             with torch.no_grad():      
                                 num_examples = 1           
                                 idxs_nz = torch.nonzero(torch.from_numpy(bin_mask[:,:]))
@@ -193,7 +193,7 @@ class Validate:
                                     for pre_i in range(predictions_out.size()[0]):
                                         if predictions_out[pre_i]:
                                             bin_mask[idxs_nz[int(elem_i*num_examples + pre_i)][0],idxs_nz[int(elem_i*num_examples+pre_i)][1]] = 0
-                        print("collonae")
+                        
                         wae = db_eval_iou(tensor2im(val_batch['gt_masks'][t+1], unnormalize=False), bin_mask)
                         j_batch[i_thr, t] = np.round(wae, n_digits)
                         # Create row of dataframe 
@@ -229,7 +229,7 @@ class Validate:
                     epochs.append(Y)
         mom = Q_real_M_cat(3,3)
         for e in epochs:
-            if int(e) == 7000:
+            if int(e) == 5400:
                 print("New Epoch ", str(e))
                 self._model.load_val(str(e))
                 m = self._validation_batch_for_each_t(e,mom)

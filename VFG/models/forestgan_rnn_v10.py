@@ -280,17 +280,17 @@ class ForestGANRNN_v10(BaseModel):
             self._curr_mask = mask_next_fg
             # Fake fgs
             d_fake_fg = self._Df(Inext_fake_fg, is_fg=True)
-            self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, False) * self._opt.lambda_Gf_prob_fg
+            self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, True) * self._opt.lambda_Gf_prob_fg
             
             # Fake masks
             d_fake_mask = self._Df(mask_next_fg, is_fg=False)
-            self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, False) * self._opt.lambda_Gf_prob_mask
+            self._loss_g_fg = self._loss_g_fg + self._compute_loss_D(d_fake_fg, True) * self._opt.lambda_Gf_prob_mask
             
             # Fake bgs
             patches_Inext_bg = self._extract_img_patches(Inext_fake_bg)
 
             d_fake_bg = self._Db(patches_Inext_bg)
-            self._loss_g_bg = self._loss_g_bg + self._compute_loss_D(d_fake_bg, False) * self._opt.lambda_Gb_prob
+            self._loss_g_bg = self._loss_g_bg + self._compute_loss_D(d_fake_bg, True) * self._opt.lambda_Gb_prob
             
             # Fake images
             self._loss_g_fb_rec = self._loss_g_fb_rec + self._criterion_Gs_rec(self._next_frame_imgs_ori, Inext_fake) * self._opt.lambda_rec
@@ -310,7 +310,7 @@ class ForestGANRNN_v10(BaseModel):
 
     
     def _generate_fake_samples_test(self, t):
-        Inext_fake_fg, mask_next_fg = self._Gf(self._curr_f, self._curr_OFs)
+        Inext_fake_fg, mask_next_fg = self._Gf(self._curr_f, self._curr_OFs,self._curr_mask[:,0:1,:,:])
         Inext_fake_bg = self._Gb(self._curr_b)
         Inext_fake = (1 - mask_next_fg) * Inext_fake_bg + Inext_fake_fg
         return Inext_fake, Inext_fake_fg, Inext_fake_bg, mask_next_fg
@@ -327,6 +327,7 @@ class ForestGANRNN_v10(BaseModel):
                 Inext_fake, Inext_fake_fg, Inext_fake_bg, mask_next_fg = self._generate_fake_samples_test(t)
                 self._curr_f = Inext_fake_fg 
                 self._curr_b = Inext_fake_bg
+                self._curr_mask = mask_next_fg
                 fgs.append(Inext_fake_fg)
                 bgs.append(Inext_fake_bg)
                 fakes.append(Inext_fake)

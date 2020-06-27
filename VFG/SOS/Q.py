@@ -318,45 +318,45 @@ class Q_real_M_cat(nn.Module):
             
         return x
 
-    def create_M(self):
+    def create_M(self,c):
         # This method should be created from outlise the class
-        for c in self.veroneses.keys():
-            print("creating M")
-            print(c)
-            with torch.no_grad():
-                n = len(self.veroneses[c])
-                d, bs = self.veroneses[c][0].size()
-                Mc = torch.tensor([])
-                for i in range(0,n):
-                    print(i/n)
-                    #V = torch.cat([V, self.veroneses[i+1]], dim=1)
-                    V = self.veroneses[c][i]
-                    A = self.veroneses[c][i]
-                    A = A.view(bs,d,1)
-                    B = self.veroneses[c][i]
-                    B = B.view(bs,1,d)
-                    Mc_m = torch.matmul(A, B)
-                    # Mc_m = torch.bmm(V.view(bs,d,1), V.view(bs,1,d))
-                    # print(Mc_m)
-                    Mc_m = torch.mean(Mc_m, dim=0)
-                    Mc = torch.cat([Mc,Mc_m.unsqueeze(0)])
-                    # print(Mc.size())
-                M = torch.mean(Mc,dim=0) + 0.0001 * torch.eye(d)
-                # M = torch.mean(Mc,dim=0)
-                # print(M.size())
-                # print("Moment matrix, should have hankel structure")
-                # print(M)
-                # U_m, S_m, V_m = torch.svd(M)
-                # print("singular values of M = ", S_m)
-                self.M_invs[c] = torch.inverse(M).cuda()
-                # print(self.M_inv)
-                # U,S,V = torch.svd(self.M_inv)
-                # print("Singular values of M_inv = ", S)
+        
+        print("creating M")
+        print(c)
+        with torch.no_grad():
+            n = len(self.veroneses[c])
+            d, bs = self.veroneses[c][0].size()
+            Mc = torch.tensor([])
+            for i in range(0,n):
+                # print(i/n)
+                #V = torch.cat([V, self.veroneses[i+1]], dim=1)
+                V = self.veroneses[c][i]
+                A = self.veroneses[c][i]
+                A = A.view(bs,d,1)
+                B = self.veroneses[c][i]
+                B = B.view(bs,1,d)
+                Mc_m = torch.matmul(A, B)
+                # Mc_m = torch.bmm(V.view(bs,d,1), V.view(bs,1,d))
+                # print(Mc_m)
+                Mc_m = torch.mean(Mc_m, dim=0)
+                Mc = torch.cat([Mc,Mc_m.unsqueeze(0)])
+                # print(Mc.size())
+            M = torch.mean(Mc,dim=0) + 0.0001 * torch.eye(d)
+            # M = torch.mean(Mc,dim=0)
+            # print(M.size())
+            # print("Moment matrix, should have hankel structure")
+            # print(M)
+            # U_m, S_m, V_m = torch.svd(M)
+            # print("singular values of M = ", S_m)
+            self.M_invs[c] = torch.inverse(M).cuda()
+            # print(self.M_inv)
+            # U,S,V = torch.svd(self.M_inv)
+            # print("Singular values of M_inv = ", S)
         self.has_M_inv[c] = True
         
-    def set_build_M(self):
+    def set_build_M(self,c):
         # self.build_M = True
-        self.create_M()
+        self.create_M(c)
 
 
 

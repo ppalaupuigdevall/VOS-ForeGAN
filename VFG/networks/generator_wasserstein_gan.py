@@ -417,9 +417,9 @@ class GeneratorF_static_ACR_v1_dark_m(NetworkBase):
 
         If_next_masked = att_mask * If_prev_masked + (1-att_mask)*color_mask
         fgmask = self.fgmask_conv(features)
-        fgmask = self.satsig(4.0*fgmask)
-        If_next_masked = fgmask * If_next_masked + (1-fgmask) * -1.0 *torch.ones_like(If_next_masked).cuda()
-        # If_next_masked = fgmask*If_next_masked + (1-fgmask)*If_next_masked
+        fgmask = self.satsig(20.0*fgmask) # v10_Bf i v10 amb 4 ||| v10_satsig_20 amb 20 i laltre tambe
+        # If_next_masked = fgmask * If_next_masked + (1-fgmask) * -1.0 *torch.ones_like(If_next_masked).cuda() # Aixo eren els forestgan_rnn_v10 i forestgan_rnn_v10_BFi v10_satsig_20_dark
+        If_next_masked = fgmask*If_next_masked + (1-fgmask)*If_next_masked # aquest es el satsig_20_basliene
         return  If_next_masked, fgmask
 
 class GeneratorF_static_ACR_v1_antic(NetworkBase):
