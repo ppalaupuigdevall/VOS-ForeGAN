@@ -1,4 +1,5 @@
 # GANs
+![GitHub Logo](/results/imgs/dmask-prop/training/dmaskprop_bmxbumps.gif)
 
 Results in experiments folder
 
