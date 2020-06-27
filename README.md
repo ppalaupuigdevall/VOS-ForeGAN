@@ -9,9 +9,28 @@ Video Object Segmentation is arguably one of the most challenging tasks of compu
 ## Results
 Main results of our models: _baseline_, _Dmask_ and _Dmask-prop_.
 
+
+
 <img src="/results/imgs/baseline/training/baseline_bmxbumps.gif" width="260" height="140"/> <img src="/results/imgs/dmask/training/dmask_bmxbumps.gif" width="260" height="140"/> <img src="/results/imgs/dmask-prop/training/dmaskprop_bmxbumps.gif" width="260" height="140"/>
 
-<img src="/results/imgs/baseline/training/baseline_bmxbumps.gif" width="325" height="175"/> <img src="/results/imgs/dmask/training/dmask_bmxbumps.gif" width="325" height="175"/> <img src="/results/imgs/dmask-prop/training/dmaskprop_bmxbumps.gif" width="325" height="175"/>
+<img src="/results/imgs/baseline/training/baseline_bmxbumps.gif" width="260" height="140"/> <img src="/results/imgs/dmask/training/dmask_bmxbumps.gif" width="260" height="140"/> <img src="/results/imgs/dmask-prop/training/dmaskprop_bmxbumps.gif" width="260" height="140"/>
+
+<div class="wrap">
+      <div>
+      <img src="/results/imgs/baseline/training/baseline_bmxbumps.gif" width="260" height="140"/>
+      <h1 class="text_over_image">Baseline</h1>
+      </div>
+</div> <div class="wrap">
+      <div>
+      <img src="/results/imgs/dmask/training/dmask_bmxbumps.gif" width="260" height="140"/>
+      <h1 class="text_over_image">Dmask</h1>
+      </div>
+</div> </div> <div class="wrap">
+      <div>
+      <img src="/results/imgs/dmask-prop/training/dmaskprop_bmxbumps.gif" width="260" height="140"/>
+      <h1 class="text_over_image">Dmask-prop</h1>
+      </div>
+</div>
 
 ### Setup
 
