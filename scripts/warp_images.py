@@ -61,9 +61,9 @@ def remap_values(values, xmin, xmax, ymin, ymax):
 resolutions = {0:(140,260), 1:(175,325), 2:(224,416), 3:(280, 520)}
 desired_shape = resolutions[2]
 
-img_dir = '/data/Ponc/DAVIS/JPEGImages/480p/training/bear/'
-flo_dir = '/data/Ponc/DAVIS/OpticalFlows/training/bear/'
-mask_dir = '/data/Ponc/DAVIS/Annotations/480p/bear/'
+img_dir = '/data/Ponc/DAVIS/JPEGImages/480p/training/rollerblade/'
+flo_dir = '/data/Ponc/DAVIS/OpticalFlows/training/rollerblade/'
+mask_dir = '/data/Ponc/DAVIS/Annotations/480p/rollerblade/'
 
 img_list = sorted(os.listdir(img_dir))
 
