@@ -9,8 +9,8 @@ class BaseOptions():
         self._initialized = False
 
     def initialize(self):
-        self._parser.add_argument('--img_dir',          type=str,   default="/data/Ponc/DAVIS/JPEGImages/480p/validation/",    help='path to imgs folder')
-        self._parser.add_argument('--OF_dir',           type=str,   default="/data/Ponc/DAVIS/OpticalFlows/validation/",       help='path to OFs folder')
+        self._parser.add_argument('--img_dir',          type=str,   default="/data/Ponc/DAVIS/JPEGImages/480p/training/",    help='path to imgs folder')
+        self._parser.add_argument('--OF_dir',           type=str,   default="/data/Ponc/DAVIS/OpticalFlows/training/",       help='path to OFs folder')
         self._parser.add_argument('--mask_dir',         type=str,   default="/data/Ponc/DAVIS/Annotations/480p/",   help='path to masks folder')
         self._parser.add_argument('--resolution',       type=tuple, default=(224, 416),                             help='default image resolution')
         self._parser.add_argument('--T',                type=int,   default=8,                                     help='temporal horizon')
