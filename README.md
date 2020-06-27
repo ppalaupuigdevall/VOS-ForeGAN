@@ -10,7 +10,7 @@ Video Object Segmentation is arguably one of the most challenging tasks of compu
 Main results of our models: _baseline_, _Dmask_ and _Dmask-prop_.
 
 
-                Baseline                         Dmask                         Dmask-prop
+                Baseline                           Dmask                         Dmask-prop
 <img src="/results/imgs/baseline/training/baseline_bmxbumps.gif" width="260" height="140"/> <img src="/results/imgs/dmask/training/dmask_bmxbumps.gif" width="260" height="140"/> <img src="/results/imgs/dmask-prop/training/dmaskprop_bmxbumps.gif" width="260" height="140"/>
 
 
