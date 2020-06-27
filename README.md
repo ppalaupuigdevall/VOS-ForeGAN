@@ -11,7 +11,7 @@ Main results of our models: _baseline_, _Dmask_ and _Dmask-prop_.
 
 <img src="/results/imgs/baseline/training/baseline_bmxbumps.gif" width="260" height="140"/> <img src="/results/imgs/dmask/training/dmask_bmxbumps.gif" width="260" height="140"/> <img src="/results/imgs/dmask-prop/training/dmaskprop_bmxbumps.gif" width="260" height="140"/>
 
-
+<img src="/results/imgs/baseline/training/baseline_bmxbumps.gif" width="325" height="175"/> <img src="/results/imgs/dmask/training/dmask_bmxbumps.gif" width="325" height="175"/> <img src="/results/imgs/dmask-prop/training/dmaskprop_bmxbumps.gif" width="325" height="175"/>
 
 ### Setup
 
