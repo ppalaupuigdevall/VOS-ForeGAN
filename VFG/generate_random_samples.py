@@ -85,7 +85,7 @@ class Test:
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'fake_'+ "{:02d}".format(t) + '.jpeg'), rgb2bgr(tensor2im(fakes[t])))
             im = resize_img_cv2(cv2.imread(img_name), self._opt.resolution)
             mask = np.reshape(tensor2im(masks[t],unnormalize=False), self._opt.resolution) 
-            ret, bin_mask = cv2.threshold(mask,75, 255, cv2.THRESH_BINARY)
+            ret, bin_mask = cv2.threshold(mask,65, 255, cv2.THRESH_BINARY)
             cv2.imwrite(os.path.join(self._opt.test_dir_save,'mask_debug_'+ "{:02d}".format(t) + '.jpeg'), bin_mask)
             # Draw contours:
             image, contours, hierarchy = cv2.findContours(bin_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
