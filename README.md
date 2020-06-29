@@ -31,3 +31,11 @@ Main results at time horizon 3T of our models: _baseline_, _Dmask_ and _Dmask-pr
 source ../venmom/bin/activate
 export PYTHONPATH=$PWD:/home/ppalau/VOS-ForeGAN/VFG/
 ```
+
+```
+python VFG/generate_random_samples.py --model forestgan_rnn_v10 --name forestgan_rnn_v10_BF_sastig_20_baseline  --load_epoch 2000 --gpu_ids 0 --T 26
+
+python VFG/generate_random_samples.py --model forestgan_rnn_v10 --name forestgan_rnn_v10_BF_sastig_20_baseline  --load_epoch 2000 --gpu_ids 0 --T 26
+
+python VFG/generate_random_samples.py --model forestgan_rnn_v10 --name forestgan_rnn_v10_BF_sastig_20_baseline  --load_epoch 2000 --gpu_ids 0 --T 26
+```
