@@ -1,6 +1,6 @@
-# Self-Supervised Video Object Segmentation using Generative Adversarial Models
+# Self-Supervised Video Object Segmentation using Generative Adversarial Networks
 
-This repository holds my M. Sc. Thesis done in <a href="http://robustsystems.coe.neu.edu/">Robust Systems Lab</a> at <b>Northeastern University </b>, Boston MA, as part of the requirements for the <b>BarcelonaTech</b>'s Master in Telecommunication Engineering.
+This repository holds my M. Sc. Thesis done in <a href="http://robustsystems.coe.neu.edu/">Robust Systems Lab</a> at <b>Northeastern University </b>, Boston MA.
 
 ## Abstract
 
@@ -13,9 +13,19 @@ Main results at time horizon 3T of our models: _baseline_, _Dmask_ and _Dmask-pr
                 Baseline                            Dmask                           Dmask-prop
 <img src="/results/imgs/baseline/training/baseline_bmxbumps.gif" width="260" height="140"/> <img src="/results/imgs/dmask/training/dmask_bmxbumps.gif" width="260" height="140"/> <img src="/results/imgs/dmask-prop/training/dmaskprop_bmxbumps.gif" width="260" height="140"/>
 <img src="/results/imgs/baseline/training/baseline_motocrossbumps.gif" width="260" height="140"/> <img src="/results/imgs/dmask/training/dmask_motocrossbumps.gif" width="260" height="140"/> <img src="/results/imgs/dmask-prop/training/dmaskprop_motocrossbumps.gif" width="260" height="140"/>
+<img src="/results/imgs/baseline/training/baseline_tennis.gif" width="260" height="140"/> <img src="/results/imgs/dmask/training/dmask_tennis.gif" width="260" height="140"/> <img src="/results/imgs/dmask-prop/training/dmaskprop_tennis.gif" width="260" height="140"/>
+
+### Background and Foreground cooperation
+<img src="/results/imgs/dmask/training/bg_rollerblade.gif" width="260" height="140"/> <img src="/results/imgs/dmask-prop/training/dmaskprop_rollerblade.gif" width="260" height="140"/>
+
+### Validation results
 
 
-### Setup
+                Baseline                            Dmask                           Dmask-prop
+<img src="/results/imgs/baseline/validation/baseline_horsejump.gif" width="260" height="140"/> <img src="/results/imgs/dmask/validation/dmask_horsejump.gif" width="260" height="140"/> <img src="/results/imgs/dmask-prop/validation/dmaskprop_horsejump.gif" width="260" height="140"/>
+
+
+## Setup
 
 ```
 source ../venmom/bin/activate
