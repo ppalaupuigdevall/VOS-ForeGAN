@@ -2,7 +2,7 @@ import torch.nn as nn
 import numpy as np
 from networks.networks import NetworkBase, NetworksFactory
 import torch
-
+import torch.nn.functional as F
 
 ###### FOREGROUND #######
 
@@ -342,6 +342,34 @@ class GeneratorF_static_ACR_v1_dark(NetworkBase):
         # If_next_masked = fgmask*If_next_masked + (1-fgmask)*If_next_masked
         return  If_next_masked, fgmask
 
+class TransformEstimator(nn.Module):
+    def __init__(self):
+        super(TransformEstimator, self).__init__()
+
+        estimate_transform_layers = []
+        estimate_transform_layers.append(nn.Conv2d(64, 32, 3, 1, 1)) # 64x224x416
+        estimate_transform_layers.append(nn.MaxPool2d(2,2)) # 32x112x208
+        estimate_transform_layers.append(nn.ReLU(True))
+        estimate_transform_layers.append(nn.Conv2d(32,16,3,1,1)) # 16x56x104
+        estimate_transform_layers.append(nn.MaxPool2d(2,2))
+        estimate_transform_layers.append(nn.ReLU(True))
+        estimate_transform_layers.append(nn.MaxPool2d(2,2))
+        estimate_transform_layers.append(nn.Conv2d(16,8,3,1,1)) # 8x28x52
+        estimate_transform_layers.append(nn.ReLU(True))
+        estimate_transform_layers.append(nn.Conv2d(8,1,3,1,1))
+        estimate_transform_layers.append(nn.ReLU(True))
+        self.affine_tr_estimator_convs = nn.Sequential(*estimate_transform_layers)
+        estimate_transform_layers_linears = []
+        estimate_transform_layers_linears.append(nn.Linear(28*52, 3000))
+        estimate_transform_layers_linears.append(nn.ReLU(True))
+        estimate_transform_layers_linears.append(nn.Linear(3000, 6))
+        self.affine_tr_estimator_linears = nn.Sequential(*estimate_transform_layers_linears)
+
+    def forward(self, x):
+        x = self.affine_tr_estimator_convs(x)
+        x = self.affine_tr_estimator_linears(x.view(-1, ))
+        return x
+
 class GeneratorF_static_ACR_v1_dark_m(NetworkBase):
     """Generator. Encoder-Decoder Architecture."""
     def __init__(self, c_dim, T, conv_dim=64, repeat_num=6):
@@ -397,6 +425,9 @@ class GeneratorF_static_ACR_v1_dark_m(NetworkBase):
         layers_reductor.append(nn.Tanh())
         self.reductor = nn.Sequential(*layers_reductor) 
 
+        self.affine_tr_estimator = TransformEstimator()
+
+
         self.fgmask_conv = nn.Conv2d(64,1,3,1,1,bias=False)
         self.satsig = nn.Sigmoid()
         self.reset_params()
@@ -408,6 +439,11 @@ class GeneratorF_static_ACR_v1_dark_m(NetworkBase):
     def forward(self, If_prev_masked, OFprev2next,maska): 
         x = torch.cat([If_prev_masked, OFprev2next,maska], dim=1)
         features = self.main(x)
+        
+        theta = self.affine_tr_estimator(features)
+        grid = F.affine_grid(theta.view(1,2,3), features.size())
+        features = F.grid_sample(features, grid)
+
         features_ = self.last_features + features
         color_mask = self.img_reg_packs(features_)
         att_mask = self.attention_reg_packs(features_)

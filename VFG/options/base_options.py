@@ -9,8 +9,8 @@ class BaseOptions():
         self._initialized = False
 
     def initialize(self):
-        self._parser.add_argument('--img_dir',          type=str,   default="/data/Ponc/DAVIS/JPEGImages/480p/validation/",    help='path to imgs folder')
-        self._parser.add_argument('--OF_dir',           type=str,   default="/data/Ponc/DAVIS/OpticalFlows/validation/",       help='path to OFs folder')
+        self._parser.add_argument('--img_dir',          type=str,   default="/data/Ponc/DAVIS/JPEGImages/480p/training/",    help='path to imgs folder')
+        self._parser.add_argument('--OF_dir',           type=str,   default="/data/Ponc/DAVIS/OpticalFlows/training/",       help='path to OFs folder')
         self._parser.add_argument('--mask_dir',         type=str,   default="/data/Ponc/DAVIS/Annotations/480p/",   help='path to masks folder')
         self._parser.add_argument('--resolution',       type=tuple, default=(224, 416),                             help='default image resolution')
         self._parser.add_argument('--T',                type=int,   default=8,                                     help='temporal horizon')
@@ -19,11 +19,11 @@ class BaseOptions():
 
         self._parser.add_argument('--model',            type=str,   default='forestgan_rnn_v10',                   help='there is only this one so do not change it')
         self._parser.add_argument('--load_epoch',       type=int,   default=-1,                                 help='which epoch to load? set to -1 to use latest cached model')
-        self._parser.add_argument('--name',             type=str,   default='forestgan_rnn_v10_BF',                        help='name of the experiment. It decides where to store samples and models')
+        self._parser.add_argument('--name',             type=str,   default='forestgan_rnn_v10_transform',                        help='name of the experiment. It decides where to store samples and models')
         self._parser.add_argument('--checkpoints_dir',  type=str,   default='/data/Ponc/VOS-ForeGAN/',              help='models are saved here')
         self._parser.add_argument('--save_path',        type=str,   default='/data/Ponc/VOS-ForeGAN/',              help='TensorboardX directory')
-        self._parser.add_argument('--save_scalars',     type=int,   default=25, help = 'Visualizer saves scalars every save scalars epochs')
-        self._parser.add_argument('--save_imgs',        type=int,   default=100, help = 'Visualizer saves scalars every save scalars epochs')
+        self._parser.add_argument('--save_scalars',     type=int,   default=50, help = 'Visualizer saves scalars every save scalars epochs')
+        self._parser.add_argument('--save_imgs',        type=int,   default=50, help = 'Visualizer saves scalars every save scalars epochs')
         
         # Foreground/Background patches extractions
         self._parser.add_argument('--num_patches',      type=int,   default = 10, help='number of patches/image to be compared')

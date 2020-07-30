@@ -75,9 +75,9 @@ class DavisDataset(data.Dataset):
         self.categories = os.listdir(self.OF_dir)
         trainii = ['scooter-gray','soccerball','stroller','surf','swing','tennis','train']
         valii = ['paragliding-launch','parkour','scooter-black','soapbox']
-        self.categories = ['tennis']
+        # self.categories = ['tennis']
         # self.categories = ['elephant']
-        self.categories = ['horsejump-high']
+        # self.categories = ['horsejump-high']
         
         self.num_categories = len(self.categories)
         self.imgs_by_cat, self.OFs_by_cat, self.masks_by_cat = {}, {}, {}
