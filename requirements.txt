@@ -21,7 +21,7 @@ matplotlib==3.0.2
 moviepy==1.0.1
 natsort==7.0.1
 networkx==2.2
-numpy==1.17.2
+numpy==1.22.0
 opencv-python==3.4.3.18
 opt-einsum==3.1.0
 pandas==0.25.3
