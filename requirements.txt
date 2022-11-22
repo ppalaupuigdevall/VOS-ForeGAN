@@ -25,7 +25,7 @@ numpy==1.17.2
 opencv-python==3.4.3.18
 opt-einsum==3.1.0
 pandas==0.25.3
-Pillow==5.3.0
+Pillow==9.3.0
 prettytable==0.7.2
 proglog==0.1.9
 protobuf==3.10.0
